@@ -1,8 +1,13 @@
+# main imports
+import numpy as np
+import argparse
+
+# deep learning imports
 import torch
 import torchvision
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
-import numpy as np
+
 
 
 def initialize_weights(arg_class):
@@ -91,7 +96,22 @@ class Discriminator(torch.nn.Module):
 
 def main():
 
-   # TODO : prepare train data
+    parser = argparse.ArgumentParser(description="Output data file")
+
+    parser.add_argument('--folder', type=str, help="folder scenes pixels data")
+    parser.add_argument('--output', type=str, help='output model name')
+    parser.add_argument('--batch_size', type=int, help='batch size used as model input', default=32)
+    parser.add_argument('--epochs', type=int, help='number of epochs used for training model', default=30)
+
+    args = parser.parse_args()
+
+    p_folder     = args.folder
+    p_output     = args.output
+    p_batch_size = args.batch_size
+    p_epochs     = args.epochs
+
+
+    # TODO : prepare train data
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
     generator = Generator().to(device)
@@ -100,28 +120,34 @@ def main():
     print(generator)
 
 
-    discriminator = Discriminator(64).to(device)
+    discriminator = Discriminator(32).to(device)
     discriminator.apply(initialize_weights)
     print(discriminator)
 
 
     iterations = 0
 
-    # generator.to(device)
-    # for epoch in range(150):
-    #     for j in range(len(Dataloader)):
-    #         total_loss = 0
-    #         for i, data in enumerate(Dataloader[j], 0):
-    #             optimizer.zero_grad()
-    #             batch = data[0].to(device)
-    #             batch_size = batch.size(0)
-    #             gained_image = generator(batch)
-    #             gained_loss=loss(gained_image, batch)
-    #             total_loss += gained_loss.mean().item()
-    #             gained_loss.backward()
-    #             optimizer.step()
-    #     print("EPOCH:", epoch+1)
-    #     print("AVERAGE LOSS:", total_loss)
+    generator.to(device)
+    for epoch in range(150):
+        for j in range(len(Dataloader)):
+            total_loss = 0
+            for i, data in enumerate(Dataloader[j], 0):
+                optimizer.zero_grad()
+                batch = data[0].to(device)
+                batch_size = batch.size(0)
+                gained_image = generator(batch)
+                output = encoder(image_n)
+                output = decoder(output)
+                loss = loss_func(output,image)
+                gained_loss=loss(gained_image, batch)
+                
+                
+                total_loss += gained_loss.mean().item()
+
+                gained_loss.backward()
+                optimizer.step()
+        print("EPOCH:", epoch+1)
+        print("AVERAGE LOSS:", total_loss)
 
 if __name__ == "__main__":
     main()

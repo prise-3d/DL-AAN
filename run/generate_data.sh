@@ -64,7 +64,6 @@ do
             size=${#suffix} 
         done
 
-
         ./${build_folder}/main/rawls_merge_mean --folder ${folder_path} --samples ${nb_samples} --outfile $output_scene_path_fixed/${folder}_${suffix}.png --random 1
     done
       
