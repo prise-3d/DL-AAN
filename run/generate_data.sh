@@ -64,8 +64,11 @@ do
             size=${#suffix} 
         done
 
-        ./${build_folder}/main/rawls_merge_mean --folder ${folder_path} --samples ${nb_samples} --outfile $output_scene_path_fixed/${folder}_${suffix}.png --random 1
+        if [ ! -f $output_scene_path_fixed/${folder}_${suffix}.png ]; then
+          ./${build_folder}/main/rawls_merge_mean --folder ${folder_path} --samples ${nb_samples} --outfile $output_scene_path_fixed/${folder}_${suffix}.png --random 1
+        else
+          echo "$output_scene_path_fixed/${folder}_${suffix}.png already generated..."
+        fi
     done
-      
   fi
 done

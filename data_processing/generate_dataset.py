@@ -73,6 +73,12 @@ def construct_tiles(scenes, noises_path, references_path, output_path, nb):
         reference_image_path = os.path.join(references_path, scene, reference_image_name)
         reference_image = np.array(Image.open(reference_image_path))
 
+        scene_output_path = os.path.join(noises_scene_output_path, scene)
+        if not os.path.exists(scene_output_path):
+            os.makedirs(os.path.join(ref_scene_output_path, scene))
+            os.makedirs(os.path.join(noises_scene_output_path, scene))
+
+
         # create tile for each image
         for img_name in noises_images:
 
@@ -102,8 +108,8 @@ def construct_tiles(scenes, noises_path, references_path, output_path, nb):
 
                 output_image_name = output_index_str + '_' + scene + '.png'
 
-                output_noisy_path = os.path.join(noises_scene_output_path, output_image_name)
-                output_ref_path = os.path.join(ref_scene_output_path, output_image_name)
+                output_noisy_path = os.path.join(noises_scene_output_path, scene, output_image_name)
+                output_ref_path = os.path.join(ref_scene_output_path, scene, output_image_name)
 
                 Image.fromarray(np.array(tile_extract_noisy, 'uint8')).save(output_noisy_path)
                 Image.fromarray(np.array(tile_extract_ref, 'uint8')).save(output_ref_path)
