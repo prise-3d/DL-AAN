@@ -133,3 +133,6 @@ dmypy.json
 data
 references
 .vscode
+
+# tensorboard
+runs 

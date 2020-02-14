@@ -46,29 +46,29 @@ do
   output_scene_path=$output_folder/$folder
   output_scene_path_fixed=${output_scene_path//\/\//\/}
 
-  if [ ! -d "$output_scene_path_fixed" ]; then
-    # Control will enter here if $DIRECTORY doesn't exist.
-    
-    mkdir -p $output_scene_path_fixed
+  #if [ ! -d "$output_scene_path_fixed" ]; then
+  # Control will enter here if $DIRECTORY doesn't exist.
+  
+  mkdir -p $output_scene_path_fixed
 
-    suffix=
+  suffix=
 
-    for i in $(seq 1 ${nb_elements}); do
+  for i in $(seq 1 ${nb_elements}); do
 
-        suffix=$i
-        size=${#suffix} 
-    
-        while [ $size -le 4 ]
-        do
-            suffix="0${suffix}"
-            size=${#suffix} 
-        done
+      suffix=$i
+      size=${#suffix} 
+  
+      while [ $size -le 4 ]
+      do
+          suffix="0${suffix}"
+          size=${#suffix} 
+      done
 
-        if [ ! -f $output_scene_path_fixed/${folder}_${suffix}.png ]; then
-          ./${build_folder}/main/rawls_merge_mean --folder ${folder_path} --samples ${nb_samples} --outfile $output_scene_path_fixed/${folder}_${suffix}.png --random 1
-        else
-          echo "$output_scene_path_fixed/${folder}_${suffix}.png already generated..."
-        fi
-    done
-  fi
+      if [ ! -f $output_scene_path_fixed/${folder}_${suffix}.png ]; then
+        ./${build_folder}/main/rawls_merge_mean --folder ${folder_path} --samples ${nb_samples} --outfile $output_scene_path_fixed/${folder}_${suffix}.png --random 1
+      else
+        echo "$output_scene_path_fixed/${folder}_${suffix}.png already generated..."
+      fi
+  done
+  #fi
 done

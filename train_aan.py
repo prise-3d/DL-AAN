@@ -13,8 +13,7 @@ import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 from torch.utils.tensorboard import SummaryWriter
 
-IMAGE_SIZE = 100
-input_shape = (3, IMAGE_SIZE, IMAGE_SIZE)
+IMAGE_SIZE = 64
 
 BACKUP_MODEL_NAME = "synthesis_{}_model.pt"
 BACKUP_FOLDER = "saved_models"
@@ -48,15 +47,15 @@ class Encoder(torch.nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
     self.encoder = torch.nn.Sequential(
-                                       torch.nn.Conv2d(3, 32, kernel_size=4, stride=2),
+                                       torch.nn.Conv2d(3, 32, kernel_size=3, stride=1),
                                        torch.nn.ReLU(),
-                                       torch.nn.Conv2d(32, 64, kernel_size=4, stride=2),
+                                       torch.nn.Conv2d(32, 64, kernel_size=3, stride=1),
                                        torch.nn.ReLU(),
-                                       torch.nn.Conv2d(64, 128, kernel_size=4, stride=2),
+                                       torch.nn.Conv2d(64, 128, kernel_size=3, stride=1),
                                        torch.nn.ReLU(),
-                                       torch.nn.Conv2d(128, 256, kernel_size=4, stride=2),
+                                       torch.nn.Conv2d(128, 256, kernel_size=3, stride=1),
                                        torch.nn.ReLU(),
-                                       Flatten()
+                                       #Flatten()
                                       )
   def forward(self, inp):
     return self.encoder(inp)
@@ -66,28 +65,28 @@ class Decoder(torch.nn.Module):
   def __init__(self):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    UnFlatten(),
-                                    torch.nn.ConvTranspose2d(1024, 128, kernel_size=5, stride=2),
+                                    #UnFlatten(),
+                                    torch.nn.ConvTranspose2d(256, 128, kernel_size=3, stride=1),
                                     torch.nn.ReLU(),
-                                    torch.nn.ConvTranspose2d(128, 64, kernel_size=5, stride=2),
+                                    torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1),
                                     torch.nn.ReLU(),
-                                    torch.nn.ConvTranspose2d(64, 32, kernel_size=6, stride=2),
+                                    torch.nn.ConvTranspose2d(64, 32, kernel_size=3, stride=1),
                                     torch.nn.ReLU(),
-                                    torch.nn.ConvTranspose2d(32, 3, kernel_size=6, stride=2),
+                                    torch.nn.ConvTranspose2d(32, 3, kernel_size=3, stride=1),
                                     torch.nn.Sigmoid(),
                                    )
   def forward(self, inp):
     return self.decoder(inp)
 
 
-class Generator(torch.nn.Module):
-  def __init__(self):
-    super(Generator, self).__init__()
-    self.encoder = Encoder()
-    self.decoder = Decoder()
+# class Generator(torch.nn.Module):
+#   def __init__(self):
+#     super(Generator, self).__init__()
+#     self.encoder = Encoder()
+#     self.decoder = Decoder()
 
-  def forward(self, inp):
-    return self.decoder(self.encoder(inp))
+#   def forward(self, inp):
+#     return self.decoder(self.encoder(inp))
 
 
 class Discriminator(torch.nn.Module):
@@ -194,42 +193,42 @@ def main():
     for epoch in range(150):
             
         batchListRef = list(enumerate(DataLoaderRef, 0))
+        autoencoder_total_loss = 0
 
         for batch_id, noisy_data in enumerate(DataLoaderNoises, 0):
             
             batch_noises, _ = noisy_data
-            batch_ref, _ = batchListRef[batch_id]
+            _, batch_ref = batchListRef[batch_id]
+
+            batch_ref_data, _ = batch_ref
 
             optimizer.zero_grad()
-          
-            print(np.array(batch_noises).shape)
+            
             # constuct new images 
             output = encoder(batch_noises)
             output = decoder(output)
 
             # pass expected ref 
-            gained_loss = loss_func(output, batch_ref)
-            
+            gained_loss = loss_func(output, batch_ref_data)
+
             # mean loss
             autoencoder_total_loss += gained_loss.mean().item()
-
-            print("Loss " + autoencoder_total_loss)
 
             gained_loss.backward()
             optimizer.step()
 
             if iteration % REPORT_EVERY_ITER == 0:
-                #log.info("Iter %d: _loss=%.3e, dis_loss=%.3e", iteration, autoencoder_total_loss, 0)
-                writer.add_scalar("gen_loss", autoencoder_total_loss, iteration)
+                writer.add_scalar("autoencoder_loss", gained_loss.mean().item(), iteration)
                 #writer.add_scalar("dis_loss", np.mean(dis_losses), iteration)
                 
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
                   writer.add_image("fake", vutils.make_grid(output.data[:IMAGE_SIZE], normalize=True), iteration)
-                  writer.add_image("real", vutils.make_grid(batch_ref.data[:IMAGE_SIZE], normalize=True), iteration)
+                  writer.add_image("real", vutils.make_grid(batch_ref_data[:IMAGE_SIZE], normalize=True), iteration)
 
             iteration += 1
+            print("AVERAGE LOSS:", autoencoder_total_loss, "at iteration", iteration)
         print("EPOCH:", epoch+1)
-        #print("AVERAGE LOSS:", total_loss)
+        print("AVERAGE LOSS:", autoencoder_total_loss)
 
 if __name__ == "__main__":
     main()
