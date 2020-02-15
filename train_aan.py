@@ -13,6 +13,12 @@ import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 from torch.utils.tensorboard import SummaryWriter
 
+# logger import
+import gym
+log = gym.logger
+log.set_level(gym.logger.INFO)
+
+# other parameters
 IMAGE_SIZE = 64
 
 BACKUP_MODEL_NAME = "synthesis_{}_model.pt"
@@ -115,16 +121,29 @@ def main():
     parser = argparse.ArgumentParser(description="Output data file")
 
     parser.add_argument('--folder', type=str, help="folder scenes pixels data")
-    parser.add_argument('--output', type=str, help='output model name')
     parser.add_argument('--batch_size', type=int, help='batch size used as model input', default=32)
-    parser.add_argument('--epochs', type=int, help='number of epochs used for training model', default=30)
+    parser.add_argument('--epochs', type=int, help='number of epochs used for training model', default=100)
+    parser.add_argument('--save', type=str, help='save folder for backup model', default='')
+    parser.add_argument('--load', type=str, help='folder backup model', default='')
 
     args = parser.parse_args()
 
     p_folder     = args.folder
-    p_output     = args.output
     p_batch_size = args.batch_size
     p_epochs     = args.epochs
+    p_save       = args.save
+    p_load       = args.load
+
+    if len(p_load) > 0:
+        load_model = True
+    else:
+        load_model = False
+
+    if len(p_save) > 0:
+        save_model = True
+    else:
+        save_model = False
+
 
     learning_rate = 0.0002
 
@@ -148,13 +167,13 @@ def main():
     references_train_path = os.path.join(train_path, 'references')
 
     train_noises = torchvision.datasets.ImageFolder(noises_train_path, transform=transforms.Compose([
-        transforms.RandomHorizontalFlip(1.), # flip horizontally all images
+        #transforms.RandomHorizontalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ]))
 
     train_ref = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
-        transforms.RandomVerticalFlip(1.), # flip horizontally all images
+        #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ]))
@@ -164,8 +183,8 @@ def main():
     #           torch.utils.data.DataLoader(male, batch_size=128, shuffle=True, num_workers=8), 
     #           torch.utils.data.DataLoader(malestaff, batch_size=128, shuffle=True, num_workers=8)]
 
-    DataLoaderNoises = torch.utils.data.DataLoader(train_noises, batch_size=32, shuffle=False, num_workers=0)
-    DataLoaderRef = torch.utils.data.DataLoader(train_ref, batch_size=32, shuffle=False, num_workers=0)
+    DataLoaderNoises = torch.utils.data.DataLoader(train_noises, batch_size=p_batch_size, shuffle=False, num_workers=0)
+    DataLoaderRef = torch.utils.data.DataLoader(train_ref, batch_size=p_batch_size, shuffle=False, num_workers=0)
 
     # creating and loading model
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
@@ -177,20 +196,54 @@ def main():
     decoder = Decoder().to(device)
     print(decoder)
 
-    parameters = list(encoder.parameters())+ list(decoder.parameters())
-    loss_func = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(parameters, lr=learning_rate)
+    # set autoencoder parameters
+    parameters = list(encoder.parameters()) + list(decoder.parameters())
+    autoencoder_loss_func = torch.nn.MSELoss()
+    autoencoder_optimizer = torch.optim.Adam(parameters, lr=learning_rate)
 
     discriminator = Discriminator(32).to(device)
     discriminator.apply(initialize_weights)
     print(discriminator)
 
+    # default params
+    iteration = 0
+    autoencoder_losses = []
+    disciminator_losses = []
+
+    # prepare folder names to save models
+    if save_model:
+        models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
+        disc_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+
+    if load_model:
+        models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
+        disc_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+
+    # load models checkpoint if exists
+    if load_model:
+        autoencoder_checkpoint = torch.load(autoencoder_model_path)
+
+        encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
+        decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
+
+        autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
+        autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
+        backup_iteration = autoencoder_checkpoint['iteration'] # retrieve only from the autoencoder the iteration number
+
+        # dis_checkpoint = torch.load(dis_model_path)
+
+        # net_discr.load_state_dict(dis_checkpoint['model_state_dict'])
+        # dis_optimizer.load_state_dict(dis_checkpoint['optimizer_state_dict'])
+        # dis_losses = dis_checkpoint['dis_losses']
+
+        iteration = backup_iteration
+        
     # define writer
     writer = SummaryWriter()
 
-    iteration = 0
-
-    for epoch in range(150):
+    for epoch in range(p_epochs):
             
         batchListRef = list(enumerate(DataLoaderRef, 0))
         autoencoder_total_loss = 0
@@ -202,31 +255,56 @@ def main():
 
             batch_ref_data, _ = batch_ref
 
-            optimizer.zero_grad()
+            autoencoder_optimizer.zero_grad()
             
             # constuct new images 
             output = encoder(batch_noises)
             output = decoder(output)
 
             # pass expected ref 
-            gained_loss = loss_func(output, batch_ref_data)
+            gained_loss = autoencoder_loss_func(output, batch_ref_data)
 
             # mean loss
+            autoencoder_losses.append(gained_loss.item())
             autoencoder_total_loss += gained_loss.mean().item()
 
             gained_loss.backward()
-            optimizer.step()
+            autoencoder_optimizer.step()
 
             if iteration % REPORT_EVERY_ITER == 0:
-                writer.add_scalar("autoencoder_loss", gained_loss.mean().item(), iteration)
-                #writer.add_scalar("dis_loss", np.mean(dis_losses), iteration)
+                log.info("Iteration %d: autoencoder_loss=%.3e, discriminator_loss=%.3e", iteration, np.mean(autoencoder_losses), np.mean(autoencoder_losses))
+                
+                writer.add_scalar("autoencoder_loss", np.mean(autoencoder_losses), iteration)
+
+                autoencoder_losses = []
                 
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
-                  writer.add_image("fake", vutils.make_grid(output.data[:IMAGE_SIZE], normalize=True), iteration)
-                  writer.add_image("real", vutils.make_grid(batch_ref_data[:IMAGE_SIZE], normalize=True), iteration)
+                writer.add_image("fake", vutils.make_grid(output.data[:IMAGE_SIZE], normalize=True), iteration)
+                writer.add_image("noisy", vutils.make_grid(batch_noises[:IMAGE_SIZE], normalize=True), iteration)
+                writer.add_image("real", vutils.make_grid(batch_ref_data[:IMAGE_SIZE], normalize=True), iteration)
 
-            iteration += 1
-            print("AVERAGE LOSS:", autoencoder_total_loss, "at iteration", iteration)
+            if iteration % BACKUP_EVERY_ITER == 0:
+                if not os.path.exists(models_folder_path):
+                    os.makedirs(models_folder_path)
+
+                torch.save({
+                            'iteration': iteration,
+                            'encoder_state_dict': encoder.state_dict(),
+                            'decoder_state_dict': decoder.state_dict(),
+                            'optimizer_state_dict': autoencoder_optimizer.state_dict(),
+                            #'autoencoder_losses': autoencoder_total_loss
+                        }, autoencoder_model_path)
+
+                # torch.save({
+                #             'iteration': iter_no,
+                #             'model_state_dict': net_discr.state_dict(),
+                #             'optimizer_state_dict': dis_optimizer.state_dict(),
+                #             'dis_losses': dis_losses
+                #     }, dis_model_path)
+
+
+                iteration += 1
+                    
         print("EPOCH:", epoch+1)
         print("AVERAGE LOSS:", autoencoder_total_loss)
 

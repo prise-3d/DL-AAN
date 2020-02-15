@@ -136,3 +136,6 @@ references
 
 # tensorboard
 runs 
+
+# backup models folder
+saved_models
