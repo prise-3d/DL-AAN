@@ -266,7 +266,6 @@ def main():
 
             # mean loss
             autoencoder_losses.append(gained_loss.item())
-            autoencoder_total_loss += gained_loss.mean().item()
 
             gained_loss.backward()
             autoencoder_optimizer.step()
@@ -292,7 +291,7 @@ def main():
                             'encoder_state_dict': encoder.state_dict(),
                             'decoder_state_dict': decoder.state_dict(),
                             'optimizer_state_dict': autoencoder_optimizer.state_dict(),
-                            #'autoencoder_losses': autoencoder_total_loss
+                            'autoencoder_losses': autoencoder_losses
                         }, autoencoder_model_path)
 
                 # torch.save({
@@ -305,8 +304,7 @@ def main():
 
                 iteration += 1
                     
-        print("EPOCH:", epoch+1)
-        print("AVERAGE LOSS:", autoencoder_total_loss)
+        print("EPOCH:", epoch + 1)
 
 if __name__ == "__main__":
     main()
