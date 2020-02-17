@@ -38,6 +38,11 @@ python train_aan.py --folder `dataset_folder` --batch_size 128 --save aan1
 
 *Note:* model will be saved into `saved_models` folder.
 
+Get information of training:
+```
+tensorboard --logdir=runs
+```
+
 ## Relaunch and train model
 
 ```
