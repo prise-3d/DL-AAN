@@ -20,12 +20,13 @@ log.set_level(gym.logger.INFO)
 
 # other parameters
 IMAGE_SIZE = 64
+DISCR_FILTERS = 32
 
-BACKUP_MODEL_NAME = "synthesis_{}_model.pt"
+BACKUP_MODEL_NAME = "{}_model.pt"
 BACKUP_FOLDER = "saved_models"
 BACKUP_EVERY_ITER = 1
 
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.0002
 REPORT_EVERY_ITER = 10
 SAVE_IMAGE_EVERY_ITER = 20
 MAX_ITERATION = 100000
@@ -99,24 +100,29 @@ class Discriminator(torch.nn.Module):
   def __init__(self, feature_maps):
     super(Discriminator, self).__init__()
     self.feature_maps = feature_maps
-    self.main = torch.nn.Sequential(torch.nn.Conv2d(3, feature_maps, 4, 2, 1, bias = False),
-                                   torch.nn.LeakyReLU(0.2, inplace=True),
-                                   torch.nn.Conv2d(feature_maps, feature_maps*2, 4, 2, 1, bias = False),
-                                   torch.nn.BatchNorm2d(feature_maps*2),
-                                   torch.nn.LeakyReLU(0.2, inplace=True),
-                                   torch.nn.Conv2d(feature_maps*2, feature_maps*4, 4, 2, 1, bias = False),
-                                   torch.nn.BatchNorm2d(feature_maps*4),
-                                   torch.nn.LeakyReLU(0.2, inplace=True),
-                                   torch.nn.Conv2d(feature_maps*4, feature_maps*8, 4, 2, 1, bias = False),
-                                   torch.nn.BatchNorm2d(feature_maps*8),
-                                   torch.nn.LeakyReLU(0.2, inplace=True),
-                                   torch.nn.Conv2d(feature_maps*8, 3, 4, 1, 0, bias = False),
-                                   torch.nn.Sigmoid())
+    self.main = torch.nn.Sequential(torch.nn.Conv2d(in_channels=3, out_channels=feature_maps, kernel_size=3, stride=1, padding=1),
+                                    torch.nn.ReLU(),
+                                    torch.nn.Conv2d(in_channels=feature_maps, out_channels=feature_maps*2, kernel_size=4, stride=2, padding=1),
+                                    torch.nn.BatchNorm2d(DISCR_FILTERS*2),
+                                    torch.nn.ReLU(),
+                                    torch.nn.Conv2d(in_channels=feature_maps * 2, out_channels=feature_maps * 4, kernel_size=4, stride=2, padding=1),
+                                    torch.nn.BatchNorm2d(DISCR_FILTERS * 4),
+                                    torch.nn.ReLU(),
+                                    torch.nn.Conv2d(in_channels=feature_maps * 4, out_channels=feature_maps * 8, kernel_size=4, stride=2, padding=1),
+                                    torch.nn.BatchNorm2d(DISCR_FILTERS * 8),
+                                    torch.nn.ReLU(),
+                                    torch.nn.Conv2d(in_channels=feature_maps * 8, out_channels=1, kernel_size=3, stride=2, padding=0),
+                                    torch.nn.Sigmoid())
   def forward(self, input_image):
-    return self.main(input_image)
+    conv_out = self.main(input_image)
+    return conv_out.view(-1, 1).squeeze(dim=1) # squeeze remove all 1 dim
 
 
 def main():
+
+    save_model = False
+    load_model = False
+    start_epoch = 0
 
     parser = argparse.ArgumentParser(description="Output data file")
 
@@ -136,16 +142,9 @@ def main():
 
     if len(p_load) > 0:
         load_model = True
-    else:
-        load_model = False
 
     if len(p_save) > 0:
         save_model = True
-    else:
-        save_model = False
-
-
-    learning_rate = 0.0002
 
     # build data path
   
@@ -189,6 +188,9 @@ def main():
     # creating and loading model
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
+    ##################################
+    # Autoencoder model declaration  #
+    ##################################
     # define models and loss functions
     encoder = Encoder().to(device)
     print(encoder)
@@ -197,83 +199,134 @@ def main():
     print(decoder)
 
     # set autoencoder parameters
-    parameters = list(encoder.parameters()) + list(decoder.parameters())
-    autoencoder_loss_func = torch.nn.MSELoss()
-    autoencoder_optimizer = torch.optim.Adam(parameters, lr=learning_rate)
+    autoencoder_parameters = list(encoder.parameters()) + list(decoder.parameters())
 
+    autoencoder_loss_func = torch.nn.MSELoss()
+    autoencoder_optimizer = torch.optim.Adam(autoencoder_parameters, lr=LEARNING_RATE, betas=(0.5, 0.999))
+
+    ####################################
+    # Discriminator model declaration  #
+    ####################################
     discriminator = Discriminator(32).to(device)
     discriminator.apply(initialize_weights)
+
+    discriminator_loss_func = torch.nn.BCELoss()
+    discriminator_optimizer = torch.optim.Adam(params=discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
     print(discriminator)
 
     # default params
     iteration = 0
     autoencoder_losses = []
-    disciminator_losses = []
+    discriminator_losses = []
+
+    # declare usefull variables for discriminator loss function
+    true_labels_v = torch.ones(p_batch_size, dtype=torch.float32, device=device)
+    fake_labels_v = torch.zeros(p_batch_size, dtype=torch.float32, device=device)
 
     # prepare folder names to save models
     if save_model:
         models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
-        disc_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+
+        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
         autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     if load_model:
         models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
-        disc_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+
+        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
         autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     # load models checkpoint if exists
     if load_model:
+
+        # load autoencoder state
         autoencoder_checkpoint = torch.load(autoencoder_model_path)
 
         encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
         decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
-
         autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
         autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
-        backup_iteration = autoencoder_checkpoint['iteration'] # retrieve only from the autoencoder the iteration number
 
-        # dis_checkpoint = torch.load(dis_model_path)
+        # load discriminator state
+        discriminator_checkpoint = torch.load(discriminator_model_path)
 
-        # net_discr.load_state_dict(dis_checkpoint['model_state_dict'])
-        # dis_optimizer.load_state_dict(dis_checkpoint['optimizer_state_dict'])
-        # dis_losses = dis_checkpoint['dis_losses']
+        discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
+        discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
+        discriminator_losses = discriminator_checkpoint['discriminator_losses']
 
+        # load global state
+        global_checkpoint = torch.load(global_model_path)
+
+        backup_iteration = global_checkpoint['iteration']
+        backup_epochs = global_checkpoint['epochs'] 
+
+        # update context variables
         iteration = backup_iteration
+        start_epoch = backup_epochs
         
     # define writer
     writer = SummaryWriter()
 
     for epoch in range(p_epochs):
             
+        if epoch < start_epoch:
+            continue 
+        
+        # initialize correct detected from discriminator
+        correct_detected = 0
+
+        # prepare enumerate for batch list ref also
         batchListRef = list(enumerate(DataLoaderRef, 0))
-        autoencoder_total_loss = 0
 
         for batch_id, noisy_data in enumerate(DataLoaderNoises, 0):
             
+            # 1. get noises batch and reference
             batch_noises, _ = noisy_data
             _, batch_ref = batchListRef[batch_id]
 
             batch_ref_data, _ = batch_ref
-
-            autoencoder_optimizer.zero_grad()
             
-            # constuct new images 
+            # 2. Train autoencoder..
+            autoencoder_optimizer.zero_grad()
+
             output = encoder(batch_noises)
             output = decoder(output)
 
-            # pass expected ref 
-            gained_loss = autoencoder_loss_func(output, batch_ref_data)
+            autoencoder_loss = autoencoder_loss_func(output, batch_ref_data)
+            autoencoder_losses.append(autoencoder_loss.item())
 
-            # mean loss
-            autoencoder_losses.append(gained_loss.item())
-
-            gained_loss.backward()
+            autoencoder_loss.backward()
             autoencoder_optimizer.step()
 
+            # 3. train discriminator
+            discriminator_optimizer.zero_grad()
+
+            discriminator_output_true_v = discriminator(batch_ref_data)
+            discriminator_output_fake_v = discriminator(output.detach())
+
+            discriminator_loss = discriminator_loss_func(discriminator_output_true_v, true_labels_v) + discriminator_loss_func(discriminator_output_fake_v, fake_labels_v)
+            discriminator_losses.append(discriminator_loss.item())
+
+            discriminator_loss.backward()
+            discriminator_optimizer.step()
+            
+            # 4. compute accuracy from the epoch
+            discriminator_output_true = (discriminator_output_true_v > 0.5).float()
+            discriminator_output_fake = (discriminator_output_fake_v > 0.5).float()
+
+            correct_detected += (discriminator_output_true == true_labels_v).float().sum() + (discriminator_output_fake == fake_labels_v).float().sum()
+            #print(correct_detected)
+            discriminator_accuracy = correct_detected / float(((batch_id + 1) * p_batch_size * 2))
+
+            # 5. Add to summary writer tensorboard
             if iteration % REPORT_EVERY_ITER == 0:
-                log.info("Iteration %d: autoencoder_loss=%.3e, discriminator_loss=%.3e", iteration, np.mean(autoencoder_losses), np.mean(autoencoder_losses))
+                log.info("Iteration %d: autoencoder_loss=%.3e, discriminator_loss=%.3e, discriminator_accuracy=%.3f", iteration, np.mean(autoencoder_losses), np.mean(discriminator_losses), discriminator_accuracy)
                 
                 writer.add_scalar("autoencoder_loss", np.mean(autoencoder_losses), iteration)
+                writer.add_scalar("discriminator_loss", np.mean(discriminator_losses), iteration)
+                writer.add_scalar("discriminator_acc", discriminator_accuracy, iteration)
 
                 autoencoder_losses = []
                 
@@ -282,6 +335,7 @@ def main():
                 writer.add_image("noisy", vutils.make_grid(batch_noises[:IMAGE_SIZE], normalize=True), iteration)
                 writer.add_image("real", vutils.make_grid(batch_ref_data[:IMAGE_SIZE], normalize=True), iteration)
 
+            # 6. Backup models information
             if iteration % BACKUP_EVERY_ITER == 0:
                 if not os.path.exists(models_folder_path):
                     os.makedirs(models_folder_path)
@@ -294,15 +348,19 @@ def main():
                             'autoencoder_losses': autoencoder_losses
                         }, autoencoder_model_path)
 
-                # torch.save({
-                #             'iteration': iter_no,
-                #             'model_state_dict': net_discr.state_dict(),
-                #             'optimizer_state_dict': dis_optimizer.state_dict(),
-                #             'dis_losses': dis_losses
-                #     }, dis_model_path)
+                torch.save({
+                            'model_state_dict': discriminator.state_dict(),
+                            'optimizer_state_dict': discriminator_optimizer.state_dict(),
+                            'discriminator_losses': discriminator_losses
+                    }, discriminator_model_path)
 
+                torch.save({
+                            'iteration': iteration,
+                            'epochs': epoch
+                        }, global_model_path)
 
-                iteration += 1
+            # 7. increment number of iteration
+            iteration += 1
                     
         print("EPOCH:", epoch + 1)
 
