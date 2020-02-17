@@ -277,6 +277,7 @@ def main():
         # initialize correct detected from discriminator
         correct_detected = 0
 
+
         # prepare enumerate for batch list ref also
         batchListRef = list(enumerate(DataLoaderRef, 0))
 
@@ -317,7 +318,6 @@ def main():
             discriminator_output_fake = (discriminator_output_fake_v > 0.5).float()
 
             correct_detected += (discriminator_output_true == true_labels_v).float().sum() + (discriminator_output_fake == fake_labels_v).float().sum()
-            #print(correct_detected)
             discriminator_accuracy = correct_detected / float(((batch_id + 1) * p_batch_size * 2))
 
             # 5. Add to summary writer tensorboard
@@ -329,6 +329,7 @@ def main():
                 writer.add_scalar("discriminator_acc", discriminator_accuracy, iteration)
 
                 autoencoder_losses = []
+                discriminator_losses = []
                 
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
                 writer.add_image("fake", vutils.make_grid(output.data[:IMAGE_SIZE], normalize=True), iteration)
