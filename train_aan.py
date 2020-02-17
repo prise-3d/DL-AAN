@@ -214,6 +214,9 @@ def main():
     discriminator_optimizer = torch.optim.Adam(params=discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
     print(discriminator)
 
+    print('--------------------------------------------------------')
+    print("Train data loader size : ", len(DataLoaderNoises.dataset))
+
     # default params
     iteration = 0
     autoencoder_losses = []
