@@ -152,11 +152,12 @@ class Discriminator(torch.nn.Module):
                                     torch.nn.Conv2d(in_channels=feature_maps * 4, out_channels=feature_maps * 8, kernel_size=4, stride=2, padding=1),
                                     torch.nn.BatchNorm2d(DISCR_FILTERS * 8),
                                     torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps * 16, out_channels=feature_maps * 16, kernel_size=4, stride=2, padding=1),
+                                    torch.nn.Conv2d(in_channels=feature_maps * 8, out_channels=feature_maps * 16, kernel_size=4, stride=1, padding=1),
                                     torch.nn.BatchNorm2d(DISCR_FILTERS * 16),
                                     torch.nn.ReLU(),
                                     torch.nn.Conv2d(in_channels=feature_maps * 16, out_channels=1, kernel_size=3, stride=2, padding=0),
                                     torch.nn.Sigmoid())
+
   def forward(self, input_image):
     conv_out = self.main(input_image)
     return conv_out.view(-1, 1).squeeze(dim=1) # squeeze remove all 1 dim
