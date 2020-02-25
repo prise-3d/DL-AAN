@@ -43,55 +43,31 @@ class ConcatDataset(torch.utils.data.Dataset):
         return min(len(d) for d in self.datasets)
 
 
-# initialize weights function
-def initialize_weights(arg_class):
-  class_name = arg_class.__class__.__name__
-  if class_name.find('Conv') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 0.0, 0.02)
-  elif class_name.find('BatchNorm') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 1.0, 0.02)
-    torch.nn.init.constant_(arg_class.bias.data, 0)
-
-class Flatten(torch.nn.Module):
-    def forward(self, input):
-        return input.view(input.size(0), -1)
-
-
-class UnFlatten(torch.nn.Module):
-    def forward(self, input, size=1024):
-        return input.view(input.size(0), size, 1, 1)
-
-
 class Encoder(torch.nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
     self.encoder = torch.nn.Sequential(
-                                       torch.nn.Conv2d(3, 32, kernel_size=3, stride=1),
+                                       torch.nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1),
                                        torch.nn.LeakyReLU(0.2, inplace=True),
+                                       #torch.nn.MaxPool2d(3, stride=2, padding=1),
                                        torch.nn.BatchNorm2d(32),
                                        torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(32, 64, kernel_size=3, stride=1),
+                                       torch.nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
                                        torch.nn.LeakyReLU(0.2, inplace=True),
+                                       #torch.nn.MaxPool2d(3, stride=2, padding=1),
                                        torch.nn.BatchNorm2d(64),
                                        torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(64, 128, kernel_size=3, stride=1),
+                                       torch.nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
                                        torch.nn.LeakyReLU(0.2, inplace=True),
                                        torch.nn.BatchNorm2d(128),
                                        torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(128, 256, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(256),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(256, 512, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(512),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(512, 1024, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(1024),
-                                       #Flatten()
                                       )
   def forward(self, inp):
+    # print('Encoder input', inp.size())
+    # x = inp
+    # for id, layer in enumerate(self.encoder):
+    #     x = layer(x)
+    #     print('Layer', id, x.size())
     return self.encoder(inp)
 
 
@@ -99,42 +75,25 @@ class Decoder(torch.nn.Module):
   def __init__(self):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    #UnFlatten(),
-                                    torch.nn.ConvTranspose2d(1024, 512, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(512),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(512, 256, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(256),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(256, 128, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(128),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1),
+                                    #torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1, padding=0),
+                                    torch.nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(64),
                                     torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(64, 32, kernel_size=3, stride=1),
+                                    torch.nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(32),
                                     torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(32, 3, kernel_size=3, stride=1),
+                                    torch.nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
                                     torch.nn.Sigmoid(),
                                    )
   def forward(self, inp):
+    # print('Decoder input', inp.size())
+    # x = inp
+    # for id, layer in enumerate(self.decoder):
+    #     x = layer(x)
+    #     print('Layer', id, x.size())
     return self.decoder(inp)
-
-
-# class Generator(torch.nn.Module):
-#   def __init__(self):
-#     super(Generator, self).__init__()
-#     self.encoder = Encoder()
-#     self.decoder = Decoder()
-
-#   def forward(self, inp):
-#     return self.decoder(self.encoder(inp))
 
 
 class Discriminator(torch.nn.Module):
@@ -240,7 +199,7 @@ def main():
     # Discriminator model declaration  #
     ####################################
     discriminator = Discriminator(32).to(device)
-    discriminator.apply(initialize_weights)
+    #discriminator.apply(initialize_weights)
 
     discriminator_loss_func = torch.nn.BCELoss()
     discriminator_optimizer = torch.optim.Adam(params=discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))

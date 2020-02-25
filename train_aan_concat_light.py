@@ -43,25 +43,6 @@ class ConcatDataset(torch.utils.data.Dataset):
         return min(len(d) for d in self.datasets)
 
 
-# initialize weights function
-def initialize_weights(arg_class):
-  class_name = arg_class.__class__.__name__
-  if class_name.find('Conv') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 0.0, 0.02)
-  elif class_name.find('BatchNorm') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 1.0, 0.02)
-    torch.nn.init.constant_(arg_class.bias.data, 0)
-
-class Flatten(torch.nn.Module):
-    def forward(self, input):
-        return input.view(input.size(0), -1)
-
-
-class UnFlatten(torch.nn.Module):
-    def forward(self, input, size=1024):
-        return input.view(input.size(0), size, 1, 1)
-
-
 class Encoder(torch.nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
@@ -82,7 +63,6 @@ class Encoder(torch.nn.Module):
                                        torch.nn.LeakyReLU(0.2, inplace=True),
                                        torch.nn.BatchNorm2d(256),
                                        torch.nn.Dropout(0.3),
-                                       #Flatten()
                                       )
   def forward(self, inp):
     return self.encoder(inp)
@@ -92,7 +72,6 @@ class Decoder(torch.nn.Module):
   def __init__(self):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    #UnFlatten(),
                                     torch.nn.ConvTranspose2d(256, 128, kernel_size=3, stride=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(128),
@@ -110,16 +89,6 @@ class Decoder(torch.nn.Module):
                                    )
   def forward(self, inp):
     return self.decoder(inp)
-
-
-# class Generator(torch.nn.Module):
-#   def __init__(self):
-#     super(Generator, self).__init__()
-#     self.encoder = Encoder()
-#     self.decoder = Decoder()
-
-#   def forward(self, inp):
-#     return self.decoder(self.encoder(inp))
 
 
 class Discriminator(torch.nn.Module):
