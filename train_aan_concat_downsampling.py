@@ -61,6 +61,10 @@ class Encoder(torch.nn.Module):
                                        torch.nn.LeakyReLU(0.2, inplace=True),
                                        torch.nn.BatchNorm2d(128),
                                        torch.nn.Dropout(0.3),
+                                       torch.nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
+                                       torch.nn.LeakyReLU(0.2, inplace=True),
+                                       torch.nn.BatchNorm2d(256),
+                                       torch.nn.Dropout(0.3),
                                       )
   def forward(self, inp):
     # print('Encoder input', inp.size())
@@ -75,7 +79,10 @@ class Decoder(torch.nn.Module):
   def __init__(self):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    #torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1, padding=0),
+                                    torch.nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+                                    torch.nn.ReLU(),
+                                    torch.nn.BatchNorm2d(128),
+                                    torch.nn.Dropout(0.3),
                                     torch.nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(64),
