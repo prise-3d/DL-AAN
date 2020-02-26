@@ -310,7 +310,13 @@ def main():
             discriminator_output_true_v = discriminator(batch_ref_data)
             discriminator_output_fake_v = discriminator(output.detach())
 
-            discriminator_loss = discriminator_loss_func(discriminator_output_true_v, true_labels_v) + discriminator_loss_func(discriminator_output_fake_v, fake_labels_v)
+            nb_true_output = len(discriminator_output_true_v)
+            nb_fake_output = len(discriminator_output_fake_v)
+
+            current_true_label = true_labels_v[:nb_true_output]
+            current_fake_label = fake_labels_v[:nb_fake_output]
+
+            discriminator_loss = discriminator_loss_func(discriminator_output_true_v, current_true_label) + discriminator_loss_func(discriminator_output_fake_v, current_fake_label)
             discriminator_losses.append(discriminator_loss.item())
 
             discriminator_loss.backward()
@@ -320,7 +326,7 @@ def main():
             discriminator_output_true = (discriminator_output_true_v > 0.5).float()
             discriminator_output_fake = (discriminator_output_fake_v > 0.5).float()
 
-            correct_detected += (discriminator_output_true == true_labels_v).float().sum() + (discriminator_output_fake == fake_labels_v).float().sum()
+            correct_detected += (discriminator_output_true == current_true_label).float().sum() + (discriminator_output_fake == current_fake_label).float().sum()
             discriminator_accuracy = correct_detected / float(((batch_id + 1) * p_batch_size * 2))
 
             # 5. Add to summary writer tensorboard
