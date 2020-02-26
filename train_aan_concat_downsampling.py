@@ -375,7 +375,7 @@ def main():
             # 7. increment number of iteration
             iteration += 1
                     
-        print("EPOCH:", epoch + 1)
+    writer.add_scalar("epoch", epoch, iteration)
 
 if __name__ == "__main__":
     main()
