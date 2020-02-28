@@ -291,22 +291,21 @@ def main():
             
         # initialize correct detected from discriminator
         correct_detected = 0
-        print(iteration)
-
+        
         # check dataset in order to restart
-        if train_dataset_batch_size * (epoch + 1) > start_iteration and restart:
+        if train_dataset_batch_size * (epoch + 1) < start_iteration and restart:
             iteration += train_dataset_batch_size
-            print(iteration)
             continue
 
         # if needed to restart, then restart from expected train_loader element
         if restart:
             nb_viewed_elements = start_iteration % train_dataset_batch_size
             train_dataset = list(train_loader)[nb_viewed_elements:]
+            print('Restart using the last', len(train_dataset), 'elements of train dataset')
             restart = False
         else:
             train_dataset = train_loader
-
+            
 
         for batch_id, (input_data, target_data)  in enumerate(train_dataset):
             
