@@ -256,31 +256,31 @@ def main():
     true_labels_v = torch.ones(p_batch_size, dtype=torch.float32, device=device)
     fake_labels_v = torch.zeros(p_batch_size, dtype=torch.float32, device=device)
 
-    # prepare folder names to save models
+     # prepare folder names to save models
     if save_model:
-        models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
+        save_models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
 
-        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
-        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
-        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+        save_global_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        save_discriminator_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        save_autoencoder_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     if load_model:
-        models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
+        load_models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
 
-        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
-        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
-        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+        load_global_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        load_discriminator_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        load_autoencoder_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     # load models checkpoint if exists
     if load_model:
 
-        if not os.path.exists(global_model_path):
+        if not os.path.exists(load_global_model_path):
             print('-------------------------')
             print('Model backup not found...')
             print('-------------------------')
         else:
             # load autoencoder state
-            autoencoder_checkpoint = torch.load(autoencoder_model_path)
+            autoencoder_checkpoint = torch.load(load_autoencoder_model_path)
 
             encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
             decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
@@ -288,14 +288,14 @@ def main():
             autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
             # load discriminator state
-            discriminator_checkpoint = torch.load(discriminator_model_path)
+            discriminator_checkpoint = torch.load(load_discriminator_model_path)
 
             discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
             discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
             discriminator_losses = discriminator_checkpoint['discriminator_losses']
 
             # load global state
-            global_checkpoint = torch.load(global_model_path)
+            global_checkpoint = torch.load(load_global_model_path)
 
             backup_iteration = global_checkpoint['iteration']
             backup_epochs = global_checkpoint['epochs'] 
@@ -414,8 +414,8 @@ def main():
 
             # 6. Backup models information
             if iteration % BACKUP_EVERY_ITER == 0:
-                if not os.path.exists(models_folder_path):
-                    os.makedirs(models_folder_path)
+                if not os.path.exists(save_models_folder_path):
+                    os.makedirs(save_models_folder_path)
 
                 torch.save({
                             'iteration': iteration,
@@ -423,7 +423,7 @@ def main():
                             'decoder_state_dict': decoder.state_dict(),
                             'optimizer_state_dict': autoencoder_optimizer.state_dict(),
                             'autoencoder_losses': autoencoder_losses
-                        }, autoencoder_model_path)
+                        }, save_autoencoder_model_path)
 
                 # save only if necessary (generator trained well)
                 if epoch >= p_start_discriminator:
@@ -431,12 +431,12 @@ def main():
                                 'model_state_dict': discriminator.state_dict(),
                                 'optimizer_state_dict': discriminator_optimizer.state_dict(),
                                 'discriminator_losses': discriminator_losses
-                        }, discriminator_model_path)
+                        }, save_discriminator_model_path)
 
                 torch.save({
                             'iteration': iteration,
                             'epochs': epoch
-                        }, global_model_path)
+                        }, save_global_model_path)
 
             # 7. increment number of iteration
             iteration += 1
