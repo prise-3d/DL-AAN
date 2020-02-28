@@ -148,6 +148,7 @@ def main():
 
     save_model = False
     load_model = False
+    restart = False
     start_epoch = 0
     start_iteration = 0
 
@@ -197,6 +198,8 @@ def main():
         batch_size=p_batch_size, shuffle=True,
         num_workers=0, pin_memory=True)
              
+    train_dataset_batch_size = len(train_loader)
+
     # creating and loading model
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
@@ -230,7 +233,7 @@ def main():
     print('discriminator total parameters : ', sum(p.numel() for p in discriminator.parameters()))
 
     print('--------------------------------------------------------')
-    print("Train data loader size : ", len(train_loader))
+    print("Train data loader size : ", train_dataset_batch_size)
 
     # default params
     iteration = 0
@@ -288,6 +291,7 @@ def main():
             # update context variables
             start_iteration = backup_iteration
             start_epoch = backup_epochs
+            restart = True
 
             print('---------------------------')
             print('Model backup found....')
@@ -303,7 +307,27 @@ def main():
         # initialize correct detected from discriminator
         correct_detected = 0
 
-        for batch_id, (input_data, target_data)  in enumerate(train_loader):
+         # check dataset in order to restart
+        if train_dataset_batch_size * (epoch + 1) < start_iteration and restart:
+            iteration += train_dataset_batch_size
+            continue
+
+        # if needed to restart, then restart from expected train_loader element
+        if restart:
+            nb_viewed_elements = start_iteration % train_dataset_batch_size
+            indices = [ i + nb_viewed_elements for i in range(nb_viewed_elements) ]
+            
+            train_dataset = torch.utils.data.DataLoader(
+                torch.utils.data.Subset(train_loader.dataset, indices),
+                batch_size=p_batch_size, shuffle=True,
+                num_workers=0, pin_memory=True)
+
+            print('Restart using the last', len(train_dataset), 'elements of train dataset')
+            restart = False
+        else:
+            train_dataset = train_loader
+
+        for batch_id, (input_data, target_data)  in enumerate(train_dataset):
             
             if start_iteration > iteration:
                 iteration += 1

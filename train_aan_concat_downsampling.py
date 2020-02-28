@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 from torch.utils.tensorboard import SummaryWriter
 
+
 # logger import
 import gym
 log = gym.logger
@@ -300,19 +301,20 @@ def main():
         # if needed to restart, then restart from expected train_loader element
         if restart:
             nb_viewed_elements = start_iteration % train_dataset_batch_size
-            train_dataset = list(train_loader)[nb_viewed_elements:]
+            indices = [ i + nb_viewed_elements for i in range(nb_viewed_elements) ]
+            
+            train_dataset = torch.utils.data.DataLoader(
+                torch.utils.data.Subset(train_loader.dataset, indices),
+                batch_size=p_batch_size, shuffle=True,
+                num_workers=0, pin_memory=True)
+
             print('Restart using the last', len(train_dataset), 'elements of train dataset')
             restart = False
         else:
             train_dataset = train_loader
-            
 
         for batch_id, (input_data, target_data)  in enumerate(train_dataset):
             
-            if start_iteration > iteration:
-                iteration += 1
-                continue
-
             # 1. get noises batch and reference
             batch_noises, _ = input_data
             batch_ref_data, _ = target_data
