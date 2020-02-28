@@ -134,6 +134,7 @@ def main():
     save_model = False
     load_model = False
     start_epoch = 0
+    start_iteration = 0
 
     parser = argparse.ArgumentParser(description="Output data file")
 
@@ -243,50 +244,56 @@ def main():
     # load models checkpoint if exists
     if load_model:
 
-        # load autoencoder state
-        autoencoder_checkpoint = torch.load(autoencoder_model_path)
+        if not os.path.exists(global_model_path):
+            print('-------------------------')
+            print('Model backup not found...')
+            print('-------------------------')
+        else:
+            # load autoencoder state
+            autoencoder_checkpoint = torch.load(autoencoder_model_path)
 
-        encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
-        decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
-        autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
-        autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
+            encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
+            decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
+            autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
+            autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
-        # load discriminator state
-        discriminator_checkpoint = torch.load(discriminator_model_path)
+            # load discriminator state
+            discriminator_checkpoint = torch.load(discriminator_model_path)
 
-        discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
-        discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
-        discriminator_losses = discriminator_checkpoint['discriminator_losses']
+            discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
+            discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
+            discriminator_losses = discriminator_checkpoint['discriminator_losses']
 
-        # load global state
-        global_checkpoint = torch.load(global_model_path)
+            # load global state
+            global_checkpoint = torch.load(global_model_path)
 
-        backup_iteration = global_checkpoint['iteration']
-        backup_epochs = global_checkpoint['epochs'] 
+            backup_iteration = global_checkpoint['iteration']
+            backup_epochs = global_checkpoint['epochs'] 
 
-        # update context variables
-        iteration = backup_iteration
-        start_epoch = backup_epochs
+            # update context variables
+            start_iteration = backup_iteration
+            start_epoch = backup_epochs
+
+            print('---------------------------')
+            print('Model backup found....')
+            print('Restart from epoch', start_epoch)
+            print('Restart from iteration', start_iteration)
+            print('---------------------------')
         
     # define writer
     writer = SummaryWriter()
 
-    print(p_epochs)
-
     for epoch in range(p_epochs):
             
-        if epoch <= start_epoch:
-            continue 
-        
         # initialize correct detected from discriminator
         correct_detected = 0
 
-
-        # prepare enumerate for batch list ref also
-        # batchListRef = list(enumerate(DataLoaderRef, 0))
-
         for batch_id, (input_data, target_data)  in enumerate(train_loader):
             
+            if start_iteration > iteration:
+                iteration += 1
+                continue
+
             # 1. get noises batch and reference
             batch_noises, _ = input_data
             batch_ref_data, _ = target_data
@@ -383,7 +390,8 @@ def main():
             # 7. increment number of iteration
             iteration += 1
                     
-        writer.add_scalar("epoch", epoch, iteration)
+        if epoch >= start_epoch:
+            writer.add_scalar("epoch", epoch + 1, iteration)
 
 if __name__ == "__main__":
     main()
