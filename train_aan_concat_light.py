@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 # vizualisation
 import torchvision.utils as vutils
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 
 # logger import
 import gym
@@ -43,25 +44,6 @@ class ConcatDataset(torch.utils.data.Dataset):
         return min(len(d) for d in self.datasets)
 
 
-# initialize weights function
-def initialize_weights(arg_class):
-  class_name = arg_class.__class__.__name__
-  if class_name.find('Conv') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 0.0, 0.02)
-  elif class_name.find('BatchNorm') != -1:
-    torch.nn.init.normal_(arg_class.weight.data, 1.0, 0.02)
-    torch.nn.init.constant_(arg_class.bias.data, 0)
-
-class Flatten(torch.nn.Module):
-    def forward(self, input):
-        return input.view(input.size(0), -1)
-
-
-class UnFlatten(torch.nn.Module):
-    def forward(self, input, size=1024):
-        return input.view(input.size(0), size, 1, 1)
-
-
 class Encoder(torch.nn.Module):
   def __init__(self):
     super(Encoder, self).__init__()
@@ -82,7 +64,6 @@ class Encoder(torch.nn.Module):
                                        torch.nn.LeakyReLU(0.2, inplace=True),
                                        torch.nn.BatchNorm2d(256),
                                        torch.nn.Dropout(0.3),
-                                       #Flatten()
                                       )
   def forward(self, inp):
     return self.encoder(inp)
@@ -92,7 +73,6 @@ class Decoder(torch.nn.Module):
   def __init__(self):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    #UnFlatten(),
                                     torch.nn.ConvTranspose2d(256, 128, kernel_size=3, stride=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(128),
@@ -110,16 +90,6 @@ class Decoder(torch.nn.Module):
                                    )
   def forward(self, inp):
     return self.decoder(inp)
-
-
-# class Generator(torch.nn.Module):
-#   def __init__(self):
-#     super(Generator, self).__init__()
-#     self.encoder = Encoder()
-#     self.decoder = Decoder()
-
-#   def forward(self, inp):
-#     return self.decoder(self.encoder(inp))
 
 
 class Discriminator(torch.nn.Module):
@@ -152,7 +122,9 @@ def main():
 
     save_model = False
     load_model = False
+    restart = False
     start_epoch = 0
+    start_iteration = 0
 
     parser = argparse.ArgumentParser(description="Output data file")
 
@@ -200,6 +172,8 @@ def main():
         batch_size=p_batch_size, shuffle=True,
         num_workers=0, pin_memory=True)
              
+    train_dataset_batch_size = len(train_loader)
+
     # creating and loading model
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
@@ -225,7 +199,6 @@ def main():
     # Discriminator model declaration  #
     ####################################
     discriminator = Discriminator(32).to(device)
-    discriminator.apply(initialize_weights)
 
     discriminator_loss_func = torch.nn.BCELoss()
     discriminator_optimizer = torch.optim.Adam(params=discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
@@ -233,7 +206,7 @@ def main():
     print('discriminator total parameters : ', sum(p.numel() for p in discriminator.parameters()))
 
     print('--------------------------------------------------------')
-    print("Train data loader size : ", len(train_loader))
+    print("Train data loader size : ", train_dataset_batch_size)
 
     # default params
     iteration = 0
@@ -244,66 +217,91 @@ def main():
     true_labels_v = torch.ones(p_batch_size, dtype=torch.float32, device=device)
     fake_labels_v = torch.zeros(p_batch_size, dtype=torch.float32, device=device)
 
-    # prepare folder names to save models
+     # prepare folder names to save models
     if save_model:
-        models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
+        save_models_folder_path = os.path.join(BACKUP_FOLDER, p_save)
 
-        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
-        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
-        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+        save_global_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        save_discriminator_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        save_autoencoder_model_path = os.path.join(save_models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     if load_model:
-        models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
+        load_models_folder_path = os.path.join(BACKUP_FOLDER, p_load)
 
-        global_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('global'))
-        discriminator_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
-        autoencoder_model_path = os.path.join(models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
+        load_global_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('global'))
+        load_discriminator_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('discriminator'))
+        load_autoencoder_model_path = os.path.join(load_models_folder_path, BACKUP_MODEL_NAME.format('autoencoder'))
 
     # load models checkpoint if exists
     if load_model:
 
-        # load autoencoder state
-        autoencoder_checkpoint = torch.load(autoencoder_model_path)
+        if not os.path.exists(load_global_model_path):
+            print('-------------------------')
+            print('Model backup not found...')
+            print('-------------------------')
+        else:
+            # load autoencoder state
+            autoencoder_checkpoint = torch.load(load_autoencoder_model_path)
 
-        encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
-        decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
-        autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
-        autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
+            encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
+            decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
+            autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
+            autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
-        # load discriminator state
-        discriminator_checkpoint = torch.load(discriminator_model_path)
+            # load discriminator state
+            discriminator_checkpoint = torch.load(load_discriminator_model_path)
 
-        discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
-        discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
-        discriminator_losses = discriminator_checkpoint['discriminator_losses']
+            discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
+            discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
+            discriminator_losses = discriminator_checkpoint['discriminator_losses']
 
-        # load global state
-        global_checkpoint = torch.load(global_model_path)
+            # load global state
+            global_checkpoint = torch.load(load_global_model_path)
 
-        backup_iteration = global_checkpoint['iteration']
-        backup_epochs = global_checkpoint['epochs'] 
+            backup_iteration = global_checkpoint['iteration']
+            backup_epochs = global_checkpoint['epochs'] 
 
-        # update context variables
-        iteration = backup_iteration
-        start_epoch = backup_epochs
+            # update context variables
+            start_iteration = backup_iteration
+            start_epoch = backup_epochs
+            restart = True
+
+            print('---------------------------')
+            print('Model backup found....')
+            print('Restart from epoch', start_epoch)
+            print('Restart from iteration', start_iteration)
+            print('---------------------------')
         
     # define writer
     writer = SummaryWriter()
 
     for epoch in range(p_epochs):
             
-        if epoch < start_epoch:
-            continue 
-        
         # initialize correct detected from discriminator
         correct_detected = 0
 
+        # check dataset in order to restart
+        if train_dataset_batch_size * (epoch + 1) < start_iteration and restart:
+            iteration += train_dataset_batch_size
+            continue
 
-        # prepare enumerate for batch list ref also
-        # batchListRef = list(enumerate(DataLoaderRef, 0))
-
-        for batch_id, (input_data, target_data)  in enumerate(train_loader):
+        # if needed to restart, then restart from expected train_loader element
+        if restart:
+            nb_viewed_elements = start_iteration % train_dataset_batch_size
+            indices = [ i + nb_viewed_elements for i in range(nb_viewed_elements) ]
             
+            train_dataset = torch.utils.data.DataLoader(
+                torch.utils.data.Subset(train_loader.dataset, indices),
+                batch_size=p_batch_size, shuffle=True,
+                num_workers=0, pin_memory=True)
+
+            print('Restart using the last', len(train_dataset), 'elements of train dataset')
+            restart = False
+        else:
+            train_dataset = train_loader
+
+        for batch_id, (input_data, target_data)  in enumerate(train_dataset):
+
             # 1. get noises batch and reference
             batch_noises, _ = input_data
             batch_ref_data, _ = target_data
@@ -328,7 +326,13 @@ def main():
                 discriminator_output_true_v = discriminator(batch_ref_data)
                 discriminator_output_fake_v = discriminator(output.detach())
 
-                discriminator_loss = discriminator_loss_func(discriminator_output_true_v, true_labels_v) + discriminator_loss_func(discriminator_output_fake_v, fake_labels_v)
+                nb_true_output = len(discriminator_output_true_v)
+                nb_fake_output = len(discriminator_output_fake_v)
+
+                current_true_label = true_labels_v[:nb_true_output]
+                current_fake_label = fake_labels_v[:nb_fake_output]
+
+                discriminator_loss = discriminator_loss_func(discriminator_output_true_v, current_true_label) + discriminator_loss_func(discriminator_output_fake_v, current_fake_label)
                 discriminator_losses.append(discriminator_loss.item())
 
                 discriminator_loss.backward()
@@ -338,7 +342,7 @@ def main():
                 discriminator_output_true = (discriminator_output_true_v > 0.5).float()
                 discriminator_output_fake = (discriminator_output_fake_v > 0.5).float()
 
-                correct_detected += (discriminator_output_true == true_labels_v).float().sum() + (discriminator_output_fake == fake_labels_v).float().sum()
+                correct_detected += (discriminator_output_true == current_true_label).float().sum() + (discriminator_output_fake == current_fake_label).float().sum()
                 discriminator_accuracy = correct_detected / float(((batch_id + 1) * p_batch_size * 2))
 
             # 5. Add to summary writer tensorboard
@@ -367,8 +371,8 @@ def main():
 
             # 6. Backup models information
             if iteration % BACKUP_EVERY_ITER == 0:
-                if not os.path.exists(models_folder_path):
-                    os.makedirs(models_folder_path)
+                if not os.path.exists(save_models_folder_path):
+                    os.makedirs(save_models_folder_path)
 
                 torch.save({
                             'iteration': iteration,
@@ -376,7 +380,7 @@ def main():
                             'decoder_state_dict': decoder.state_dict(),
                             'optimizer_state_dict': autoencoder_optimizer.state_dict(),
                             'autoencoder_losses': autoencoder_losses
-                        }, autoencoder_model_path)
+                        }, save_autoencoder_model_path)
 
                 # save only if necessary (generator trained well)
                 if epoch >= p_start_discriminator:
@@ -384,17 +388,18 @@ def main():
                                 'model_state_dict': discriminator.state_dict(),
                                 'optimizer_state_dict': discriminator_optimizer.state_dict(),
                                 'discriminator_losses': discriminator_losses
-                        }, discriminator_model_path)
+                        }, save_discriminator_model_path)
 
                 torch.save({
                             'iteration': iteration,
                             'epochs': epoch
-                        }, global_model_path)
+                        }, save_global_model_path)
 
             # 7. increment number of iteration
             iteration += 1
                     
-        print("EPOCH:", epoch + 1)
+        if epoch >= start_epoch:
+            writer.add_scalar("epoch", epoch + 1, iteration)
 
 if __name__ == "__main__":
     main()
