@@ -12,7 +12,8 @@ from pytorch_msssim import ssim
 
 # vizualisation
 import torchvision.utils as vutils
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 
 # logger import
 import gym
