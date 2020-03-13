@@ -14,7 +14,6 @@ let
 
   python = pkgs.python3;
   pypkgs = python.pkgs;
-  pytorch = pypkgs.pytorchWithCuda;
 
   tensorboardX = pypkgs.buildPythonPackage rec {
     pname = "tensorboardX";
@@ -31,27 +30,16 @@ let
 in pkgs.mkShell {
 
   buildInputs = [
-    #pkgs.cudatoolkit
-    #pkgs.cudnn
     pkgs.linuxPackages.nvidia_x11
 
-    tensorboardX
-    pytorch
-
-    pypkgs.numpy
-    pypkgs.torchvision
-    pypkgs.matplotlib
     pypkgs.gym 
-  ];
+    pypkgs.matplotlib
+    pypkgs.numpy
+    pypkgs.pytorchWithCuda
+    pypkgs.torchvision
 
-  shellHook = ''
-      export CFLAGS="-I${pytorch}/${python.sitePackages}/torch/include -I${pytorch}/${python.sitePackages}/torch/include/torch/csrc/api/include"
-      export CXXFLAGS=$CFLAGS
-      export LDFLAGS="-L${pytorch}/${python.sitePackages}/torch/lib -L$out/${python.sitePackages} -L${pkgs.cudatoolkit}/lib -L${pkgs.linuxPackages.nvidia_x11}/lib"
-      export PYTHONPATH="$PYTHONPATH:build:build/torchRL/mcts:build/torchRL/tube"
-      export CUDA_PATH=${pkgs.cudatoolkit}
-  '';
-      #export OMP_NUM_THREADS=1
+    tensorboardX
+  ];
 
 }
 
