@@ -350,6 +350,10 @@ def main():
             batch_noises, _ = input_data
             batch_ref_data, _ = target_data
             
+            # convert batch to specific device
+            batch_noises = batch_noises.to(device)
+            batch_ref_data = batch_ref_data.to(device)
+
             # 2. Train autoencoder..
             autoencoder_optimizer.zero_grad()
 
