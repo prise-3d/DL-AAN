@@ -5,4 +5,5 @@ matplotlib
 tensorflow
 tensorboardX
 gym
+rawls
 pytorch_msssim
