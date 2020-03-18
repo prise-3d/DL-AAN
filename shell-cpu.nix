@@ -15,6 +15,18 @@ let
     doCheck = false;
   };
 
+  rawls = pypkgs.buildPythonPackage rec {
+    pname = "rawls";
+    version = "0.1.1";
+    src = fetchTarball "https://github.com/prise-3d/rawls/archive/v0.1.1.tar.gz";
+    propagatedBuildInputs = with pypkgs; [
+      scipy
+      pillow
+      numpy
+    ];
+    doCheck = false;
+  };
+
 in
 
 (python3.withPackages ( ps: with ps; [
@@ -24,6 +36,7 @@ in
   matplotlib
   tensorflow
   tensorboardX
+  rawls
   gym 
 ])).env
 
