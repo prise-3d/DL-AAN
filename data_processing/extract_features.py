@@ -63,6 +63,9 @@ def extract(features, output_folder, scene_folder, index, images_path):
         feature_image_name = scene_folder + '_' + index_str + '.png'
         feature_image_path = os.path.join(feature_path, feature_image_name)
 
+        if not os.path.exists(feature_path):
+            os.makedirs(feature_path)
+
         rawls_stats_img.save(feature_image_path)
 
 
