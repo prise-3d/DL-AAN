@@ -17,7 +17,7 @@ import config as cfg
 data_train_folder  = 'train'
 data_test_folder   = 'test'
 
-data_ref_folder    = 'references'
+data_ref_folder    = cfg.references_folder
 
 tile_size          = (32, 32)
 
@@ -65,10 +65,10 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
     features_output_folder = [ os.path.join(output_path, feature) for feature in features ]
 
     # compute output static folders
-    statics_output_folder = [ os.path.join(output_path, static) for static in enumerate(statics_path) ]
+    statics_output_folder = [ os.path.join(output_path, static) for static in statics_path ]
 
     # concat all outputs folder
-    output_folders = references_output_path + features_output_folder + static_output_folder
+    output_folders = [references_output_path] + features_output_folder + statics_output_folder
 
     output_img_index = 0
 
@@ -84,7 +84,7 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
 
         for feature in features_path:
             feature_scene_path = os.path.join(feature, scene)
-            feature_images = [ os.path.join(feature, img) for img in sorted(os.listdir(feature_scene_path)) ]
+            feature_images = [ os.path.join(feature, scene, img) for img in sorted(os.listdir(feature_scene_path)) ]
             features_images_path.append(feature_images)
 
         # get static scenes images
@@ -125,7 +125,7 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
                 while len(output_index_str) < 11:
                     output_index_str = '0' + output_index_str
 
-                output_image_name = output_index_str + '_' + scene + '.png'
+                output_image_name = scene + '_' + output_index_str + '.png'
 
 
                 h_random = random.randint(0, h - h_tile - 1)
@@ -156,7 +156,6 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
             # write progress using global variable
             write_progress((images_counter + 1) / number_of_images)
 
-
 def main():
 
     global number_of_images, images_counter
@@ -164,8 +163,8 @@ def main():
     parser = argparse.ArgumentParser(description="Output data file")
 
     parser.add_argument('--main', type=str, help="main folder with features sub folders")
-    parser.add_argument('--features', type=str, help="features to select from this main folder `" + cfg.features_list + "`", default=cfg.features_list[0])
-    parser.add_argument('--static', type=str, help="list of static features to take care (managed like references)")
+    parser.add_argument('--features', type=str, help="features to select from this main folder `" + str(cfg.features_list) + "`", default=cfg.features_list[0])
+    parser.add_argument('--statics', type=str, help="list of static features to take care (managed like references)", default='')
     parser.add_argument('--references', type=str, help='folder scenes with references')
     parser.add_argument('--nb', type=int, help='number of tile extracted from each images')
     parser.add_argument('--output', type=str, help='output folder of whole data `test` and `train` folder')
@@ -174,8 +173,8 @@ def main():
     args = parser.parse_args()
 
     p_main       = args.main
-    p_features   = args.features.split(',')
-    p_static     = args.static.split(',')
+    p_features   = args.features.split(',') if len(args.features) > 0 else []
+    p_statics    = args.statics.split(',') if len(args.statics) > 0 else []
     p_references = args.references
     p_nb         = args.nb
     p_output     = args.output
@@ -197,7 +196,7 @@ def main():
     print('------------------------------------------------------------------------------------------------------')
     print('Test scenes :', test_scenes)
 
-    number_of_images = sum([ len(os.listdir(scene)) for scene in os.listdir(os.path.join(p_main, p_features[0])) ]) # get total number of images from first feature path
+    number_of_images = sum([ len(os.listdir(os.path.join(p_main, p_features[0], scene))) for scene in os.listdir(os.path.join(p_main, p_features[0])) ]) # get total number of images from first feature path
 
     print('------------------------------------------------------------------------------------------------------')
     print('-- Start generating data')
@@ -207,13 +206,12 @@ def main():
     output_train_folder = os.path.join(p_output, data_train_folder)
 
     # contruct test tiles
-    construct_tiles(test_scenes, p_main, p_features, p_static, p_references, output_test_folder, p_nb)
+    construct_tiles(test_scenes, p_main, p_features, p_statics, p_references, output_test_folder, p_nb)
 
     # construct train tiles
-    construct_tiles(train_scenes, p_main, p_features, p_static, p_references, output_train_folder, p_nb)
+    construct_tiles(train_scenes, p_main, p_features, p_statics, p_references, output_train_folder, p_nb)
 
-    # write progress using global variable
-    write_progress((images_counter + 1) / number_of_images)
+    print()
     
 
 if __name__ == "__main__":

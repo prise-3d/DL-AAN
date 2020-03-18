@@ -14,6 +14,9 @@ import torchvision.utils as vutils
 #from torch.utils.tensorboard import SummaryWriter
 from tensorboardX import SummaryWriter
 
+# model imports
+from models.upsampling import Encoder, Decoder, Discriminator
+
 # logger import
 import gym
 log = gym.logger
@@ -52,98 +55,6 @@ def initialize_weights(arg_class):
   elif class_name.find('BatchNorm') != -1:
     torch.nn.init.normal_(arg_class.weight.data, 1.0, 0.02)
     torch.nn.init.constant_(arg_class.bias.data, 0)
-
-
-class Encoder(torch.nn.Module):
-  def __init__(self):
-    super(Encoder, self).__init__()
-    self.encoder = torch.nn.Sequential(
-                                       torch.nn.Conv2d(3, 32, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(32),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(32, 64, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(64),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(64, 128, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(128),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(128, 256, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(256),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(256, 512, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(512),
-                                       torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(512, 1024, kernel_size=3, stride=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(1024),
-                                       #Flatten()
-                                      )
-  def forward(self, inp):
-    return self.encoder(inp)
-
-
-class Decoder(torch.nn.Module):
-  def __init__(self):
-    super(Decoder, self).__init__()
-    self.decoder = torch.nn.Sequential(
-                                    #UnFlatten(),
-                                    torch.nn.ConvTranspose2d(1024, 512, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(512),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(512, 256, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(256),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(256, 128, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(128),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(64),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(64, 32, kernel_size=3, stride=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(32),
-                                    torch.nn.Dropout(0.3),
-                                    torch.nn.ConvTranspose2d(32, 3, kernel_size=3, stride=1),
-                                    torch.nn.Sigmoid(),
-                                   )
-  def forward(self, inp):
-    return self.decoder(inp)
-
-
-class Discriminator(torch.nn.Module):
-  def __init__(self, feature_maps):
-    super(Discriminator, self).__init__()
-    self.feature_maps = feature_maps
-    self.main = torch.nn.Sequential(torch.nn.Conv2d(in_channels=3, out_channels=feature_maps, kernel_size=3, stride=1, padding=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps, out_channels=feature_maps*2, kernel_size=4, stride=2, padding=1),
-                                    torch.nn.BatchNorm2d(DISCR_FILTERS*2),
-                                    torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps * 2, out_channels=feature_maps * 4, kernel_size=4, stride=2, padding=1),
-                                    torch.nn.BatchNorm2d(DISCR_FILTERS * 4),
-                                    torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps * 4, out_channels=feature_maps * 8, kernel_size=4, stride=2, padding=1),
-                                    torch.nn.BatchNorm2d(DISCR_FILTERS * 8),
-                                    torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps * 8, out_channels=feature_maps * 16, kernel_size=4, stride=1, padding=1),
-                                    torch.nn.BatchNorm2d(DISCR_FILTERS * 16),
-                                    torch.nn.ReLU(),
-                                    torch.nn.Conv2d(in_channels=feature_maps * 16, out_channels=1, kernel_size=3, stride=2, padding=0),
-                                    torch.nn.Sigmoid())
-
-  def forward(self, input_image):
-    conv_out = self.main(input_image)
-    return conv_out.view(-1, 1).squeeze(dim=1) # squeeze remove all 1 dim
-
 
 def main():
 
@@ -208,10 +119,10 @@ def main():
     # Autoencoder model declaration  #
     ##################################
     # define models and loss functions
-    encoder = Encoder().to(device)
+    encoder = Encoder(3, 32).to(device)
     print(encoder)
 
-    decoder = Decoder().to(device)
+    decoder = Decoder(32).to(device)
     print(decoder)
 
     # set autoencoder parameters
