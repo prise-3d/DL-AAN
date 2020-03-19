@@ -4,8 +4,8 @@ import argparse
 import random
 
 # image processing imports
-from rawls.classes.rawls import Rawls
-from rawls import merger
+from rawls.rawls import Rawls
+from rawls.stats import RawlsStats
 
 # utils variables
 import config as cfg
@@ -33,6 +33,10 @@ def write_progress(progress):
 
 def extract(features, output_folder, scene_folder, index, images_path):
 
+    # get only one time all images
+    rawls_stats = RawlsStats.load(images_path)
+
+    # compute feature using `rawls_stats`
     for feature in features:
         
         feature_path = os.path.join(output_folder, feature, scene_folder)
@@ -40,19 +44,19 @@ def extract(features, output_folder, scene_folder, index, images_path):
         rawls_stats_img = None
 
         if feature == 'mean':
-            rawls_stats_img = merger.merge_mean_rawls(images_path)
+            rawls_stats_img = rawls_stats.mean()
         
         if feature == 'variance':
-            rawls_stats_img = merger.merge_var_rawls(images_path)
+            rawls_stats_img = rawls_stats.var()
 
         if feature == 'std':
-            rawls_stats_img = merger.merge_std_rawls(images_path)
+            rawls_stats_img = rawls_stats.std()
 
         if feature == 'skewness':
-            rawls_stats_img = merger.merge_skew_norm_rawls(images_path)
+            rawls_stats_img = rawls_stats.skew()
 
         if feature == 'kurtosis':
-            rawls_stats_img = merger.merge_kurtosis_norm_rawls(images_path)
+            rawls_stats_img = rawls_stats.kurtosis()
 
         # compute output path of feature image
         index_str = str(index)
