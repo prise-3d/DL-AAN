@@ -113,7 +113,8 @@ def main():
 
         for i in range(p_images):
             
-            images_choices = random.choices(images_path, k=p_samples)
+            random.shuffle(images_path)
+            images_choices = images_path[0:p_samples]
 
             extract(p_features, p_output, folder, i, images_choices)
 
