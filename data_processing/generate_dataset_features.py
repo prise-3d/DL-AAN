@@ -19,8 +19,6 @@ data_test_folder   = 'test'
 
 data_ref_folder    = cfg.references_folder
 
-tile_size          = (32, 32)
-
 number_of_images   = 0 # used for writing extraction progress 
 images_counter     = 0 # counter used for extraction progress
 
@@ -49,7 +47,7 @@ def write_progress(progress):
 '''
 Constuct all dataset with specific tile size
 '''
-def construct_tiles(scenes, main_path, features, statics_path, references_path, output_path, nb):
+def construct_tiles(scenes, main_path, features, statics_path, references_path, output_path, nb, tile_size):
 
     global images_counter
 
@@ -167,6 +165,7 @@ def main():
     parser.add_argument('--statics', type=str, help="list of static features to take care (managed like references)", default='')
     parser.add_argument('--references', type=str, help='folder scenes with references')
     parser.add_argument('--nb', type=int, help='number of tile extracted from each images')
+    parser.add_argument('--tile_size', type=str, help='specify size of the tile used', default='32,32')
     parser.add_argument('--output', type=str, help='output folder of whole data `test` and `train` folder')
     parser.add_argument('--train_split', type=float, help='test split size of generated data (based of number of scenes)', default=0.2)
 
@@ -177,9 +176,11 @@ def main():
     p_statics    = args.statics.split(',') if len(args.statics) > 0 else []
     p_references = args.references
     p_nb         = args.nb
+    p_tile       = args.tile_size.split(',')
     p_output     = args.output
     p_split      = args.train_split
 
+    tile_size = int(p_tile[0]), int(p_tile[1])
 
     # get list scenes folders and shuffle it
     scenes_folder = os.listdir(p_references)
@@ -206,10 +207,10 @@ def main():
     output_train_folder = os.path.join(p_output, data_train_folder)
 
     # contruct test tiles
-    construct_tiles(test_scenes, p_main, p_features, p_statics, p_references, output_test_folder, p_nb)
+    construct_tiles(test_scenes, p_main, p_features, p_statics, p_references, output_test_folder, p_nb, tile_size)
 
     # construct train tiles
-    construct_tiles(train_scenes, p_main, p_features, p_statics, p_references, output_train_folder, p_nb)
+    construct_tiles(train_scenes, p_main, p_features, p_statics, p_references, output_train_folder, p_nb, tile_size)
 
     print()
     

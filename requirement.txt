@@ -1,9 +1,14 @@
 numpy
 torch
 torchvision
+keras
 matplotlib
 tensorflow
 tensorboardX
 gym
 rawls
 pytorch_msssim
+pandas
+munch
+scikit-image
+scikit_learn

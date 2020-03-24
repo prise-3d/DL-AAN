@@ -17,10 +17,6 @@ class Encoder(torch.nn.Module):
                                        torch.nn.LeakyReLU(0.2, inplace=True),
                                        torch.nn.BatchNorm2d(feature_maps * 4),
                                        torch.nn.Dropout(0.3),
-                                       torch.nn.Conv2d(feature_maps * 4, feature_maps * 8, kernel_size=3, stride=2, padding=1),
-                                       torch.nn.LeakyReLU(0.2, inplace=True),
-                                       torch.nn.BatchNorm2d(feature_maps * 8),
-                                       torch.nn.Dropout(0.3),
                                       )
   def forward(self, inp):
     return self.encoder(inp)
@@ -30,10 +26,6 @@ class Decoder(torch.nn.Module):
   def __init__(self, feature_maps):
     super(Decoder, self).__init__()
     self.decoder = torch.nn.Sequential(
-                                    torch.nn.ConvTranspose2d(feature_maps * 8, feature_maps * 4, kernel_size=4, stride=2, padding=1),
-                                    torch.nn.ReLU(),
-                                    torch.nn.BatchNorm2d(feature_maps * 4),
-                                    torch.nn.Dropout(0.3),
                                     torch.nn.ConvTranspose2d(feature_maps * 4, feature_maps * 2, kernel_size=4, stride=2, padding=1),
                                     torch.nn.ReLU(),
                                     torch.nn.BatchNorm2d(feature_maps * 2),

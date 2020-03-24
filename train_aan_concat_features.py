@@ -15,7 +15,10 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.upsampling import Encoder, Decoder, Discriminator
+from models.downsampling_light import Encoder, Decoder, Discriminator
+
+# losses imports
+from losses.utils import instanciate, loss_choices
 
 # logger import
 import gym
@@ -86,6 +89,8 @@ def main():
     parser.add_argument('--folder', type=str, help="folder with train/test folders within all features sub folders")
     parser.add_argument('--batch_size', type=int, help='batch size used as model input', default=32)
     parser.add_argument('--epochs', type=int, help='number of epochs used for training model', default=100)
+    parser.add_argument('--autoencoder_loss', type=str, help="loss function choice", choices=loss_choices, default='mse')
+    parser.add_argument('--discriminator_loss', type=str, help="loss function choice", choices=loss_choices, default='bce')
     parser.add_argument('--start_discriminator', type=int, help='number of epochs when you want the discriminator started', default=5)
     parser.add_argument('--save', type=str, help='save folder for backup model', default='')
     parser.add_argument('--load', type=str, help='folder backup model', default='')
@@ -95,6 +100,8 @@ def main():
     p_folder              = args.folder
     p_batch_size          = args.batch_size
     p_epochs              = args.epochs
+    p_autoencoder_loss    = args.autoencoder_loss
+    p_discriminator_loss  = args.discriminator_loss
     p_start_discriminator = args.start_discriminator
     p_save                = args.save
     p_load                = args.load
@@ -163,7 +170,7 @@ def main():
     # set autoencoder parameters
     autoencoder_parameters = list(encoder.parameters()) + list(decoder.parameters())
 
-    autoencoder_loss_func = torch.nn.MSELoss()
+    autoencoder_loss_func = instanciate(p_autoencoder_loss)
     autoencoder_optimizer = torch.optim.Adam(autoencoder_parameters, lr=LEARNING_RATE, betas=(0.5, 0.999))
 
     print('autoencoder total parameters : ', sum(p.numel() for p in autoencoder_parameters))
@@ -174,7 +181,7 @@ def main():
     discriminator = Discriminator(img_size).to(device)
     discriminator.apply(initialize_weights)
 
-    discriminator_loss_func = torch.nn.BCELoss()
+    discriminator_loss_func = instanciate(p_discriminator_loss)
     discriminator_optimizer = torch.optim.Adam(params=discriminator.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
     print(discriminator)
     print('discriminator total parameters : ', sum(p.numel() for p in discriminator.parameters()))
