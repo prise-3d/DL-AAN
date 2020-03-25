@@ -15,7 +15,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.downsampling_light import Encoder, Decoder, Discriminator
+from models.downsampling import Encoder, Decoder, Discriminator
 
 # losses imports
 from losses.utils import instanciate, loss_choices
