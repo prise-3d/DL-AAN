@@ -1,11 +1,12 @@
 import torch 
 
+from .lmse import LMSE
 from .ssim import SSIM
 from .koncept import Koncept512, Koncept224
 from .mixin import MSEK512, MSEK224
 
 # loss list
-loss_choices = ['mse', 'ssim', 'bce', 'koncept512', 'koncept224', 'msek512', 'msek224']
+loss_choices = ['mse', 'ssim', 'bce', 'koncept512', 'koncept224', 'msek512', 'msek224', 'lmse']
 
 def instanciate(choice):
     
@@ -32,3 +33,6 @@ def instanciate(choice):
 
     if choice == 'msek224':
         return MSEK224()
+
+    if choice == 'lmse':
+        return LMSE()

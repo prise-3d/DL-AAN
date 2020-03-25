@@ -1,12 +1,12 @@
 import torch
 
-from skimage.metrics import structural_similarity
+from skimage.metrics import mean_squared_error
 from ipfml.processing.transform import get_LAB_L
 
-class SSIM(torch.nn.Module):
+class LMSE(torch.nn.Module):
 
     def __init__(self):
-        super(SSIM, self).__init__()
+        super(LMSE, self).__init__()
 
     def forward(self, inputs, targets):
 
@@ -20,17 +20,18 @@ class SSIM(torch.nn.Module):
             # get shape and then reshape using channels as 3 dimension
             c, h, w = img_input_array.shape
 
-            img_input_array = get_LAB_L(img_input_array.reshape(h, w, c))
-            img_target_array = get_LAB_L(img_target_array.reshape(h, w, c))
+            # img_input_array = get_LAB_L(img_input_array.reshape(h, w, c))
+            # img_target_array = get_LAB_L(img_target_array.reshape(h, w, c))
+
+            img_input_array = (img_input_array.reshape(h, w, c))
+            img_target_array = (img_target_array.reshape(h, w, c))
 
             # multichanel is applied on last dimension
-            score = structural_similarity(img_input_array, img_target_array, data_range=img_target_array.max() - img_target_array.min())
+            score = mean_squared_error(img_input_array, img_target_array)
 
             losses.append(score)
 
         loss_mean = torch.sum(torch.FloatTensor(losses)) / len(losses)
         loss_mean.requires_grad_()
 
-        print(1. - loss_mean)
-
-        return 1. - loss_mean
+        return loss_mean
