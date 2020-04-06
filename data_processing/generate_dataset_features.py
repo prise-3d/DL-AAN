@@ -63,10 +63,19 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
     features_output_folder = [ os.path.join(output_path, feature) for feature in features ]
 
     # compute output static folders
-    statics_output_folder = [ os.path.join(output_path, static) for static in statics_path ]
+    statics_output_folder = []
+
+    for static in statics_path:
+        path_split = static.split('/')
+
+        if path_split[-1] != '':
+            statics_output_folder.append(os.path.join(output_path, path_split[-1]))
+        else:
+            statics_output_folder.append(os.path.join(output_path, path_split[-2]))
 
     # concat all outputs folder
     output_folders = [references_output_path] + features_output_folder + statics_output_folder
+    print(output_folders)
 
     output_img_index = 0
 

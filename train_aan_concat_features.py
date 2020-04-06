@@ -15,7 +15,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.downsampling import Encoder, Decoder, Discriminator
+from models.upsampling_ligth import Encoder, Decoder, Discriminator
 
 # losses imports
 from losses.utils import instanciate, loss_choices
@@ -84,7 +84,7 @@ def main():
     start_epoch = 0
     start_iteration = 0
 
-    parser = argparse.ArgumentParser(description="Output data file")
+    parser = argparse.ArgumentParser(description="Generate model using specific features")
 
     parser.add_argument('--folder', type=str, help="folder with train/test folders within all features sub folders")
     parser.add_argument('--batch_size', type=int, help='batch size used as model input', default=32)
