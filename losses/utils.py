@@ -6,12 +6,15 @@ from .koncept import Koncept512, Koncept224
 from .mixin import MSEK512, MSEK224
 
 # loss list
-loss_choices = ['mse', 'ssim', 'bce', 'koncept512', 'koncept224', 'msek512', 'msek224', 'lmse']
+loss_choices = ['mse', 'ssim', 'bce', 'koncept512', 'koncept224', 'msek512', 'msek224', 'lmse', 'L1']
 
 def instanciate(choice):
     
     if choice not in loss_choices:
         raise Exception('invalid loss function choice')
+
+    if choice == 'L1':
+        return torch.nn.L1Loss()
 
     if choice == 'mse':
         return torch.nn.MSELoss()

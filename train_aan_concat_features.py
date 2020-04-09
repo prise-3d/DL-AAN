@@ -76,6 +76,19 @@ class ConcatDataset(torch.utils.data.Dataset):
         return min(len(d) for d in self.datasets)
 
 
+class CustomNormalize(object):
+    """Normalize image input between 0 and 1.
+    """
+
+    def __call__(self, sample):
+        
+        image = sample.numpy()
+
+        # normalise data
+        image = image / np.max(image)
+
+        return torch.from_numpy(image)
+
 def main():
 
     save_model = False
@@ -120,7 +133,8 @@ def main():
     img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
         #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
-        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        CustomNormalize()
+        #transforms.Normalize([123, 123, 123], [123, 123, 123])
     ]))
 
     image_folders_data = [img_ref_folder]
@@ -133,7 +147,8 @@ def main():
             img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
                 #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                 transforms.ToTensor(),
-                transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+                CustomNormalize()
+                #transforms.Normalize([123, 123, 123], [123, 123, 123])
             ]))
 
             image_folders_data.append(img_folder)
