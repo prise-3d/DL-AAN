@@ -133,7 +133,7 @@ def main():
     img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
         #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
-        CustomNormalize()
+        #CustomNormalize()
         #transforms.Normalize([123, 123, 123], [123, 123, 123])
     ]))
 
@@ -147,7 +147,7 @@ def main():
             img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
                 #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                 transforms.ToTensor(),
-                CustomNormalize()
+                #CustomNormalize()
                 #transforms.Normalize([123, 123, 123], [123, 123, 123])
             ]))
 
