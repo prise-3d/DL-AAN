@@ -18,7 +18,8 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.upsampling_ligth import Encoder, Decoder, Discriminator
+from models.autoencoders.ushaped import UShapedAutoencoder as AutoEncoder
+from models.discriminators.discriminator_v1 import Discriminator
 
 # losses imports
 from losses.utils import instanciate, loss_choices
@@ -191,14 +192,11 @@ def main():
         break
 
     # define models and loss functions
-    encoder = Encoder(n_channels, img_size).to(device)
-    print(encoder)
-
-    decoder = Decoder(img_size).to(device)
-    print(decoder)
+    autoencoder = AutoEncoder(n_channels, img_size).to(device)
+    print(autoencoder)
 
     # set autoencoder parameters
-    autoencoder_parameters = list(encoder.parameters()) + list(decoder.parameters())
+    autoencoder_parameters = autoencoder.params()
 
     autoencoder_loss_func = instanciate(p_autoencoder_loss)
     autoencoder_optimizer = torch.optim.Adam(autoencoder_parameters, lr=LEARNING_RATE, betas=(0.5, 0.999))
@@ -254,8 +252,7 @@ def main():
             # load autoencoder state
             autoencoder_checkpoint = torch.load(load_autoencoder_model_path)
 
-            encoder.load_state_dict(autoencoder_checkpoint['encoder_state_dict'])
-            decoder.load_state_dict(autoencoder_checkpoint['decoder_state_dict'])
+            autoencoder.load_state_dict(autoencoder_checkpoint['autoencoder_state_dict'])
             autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
             autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
@@ -330,8 +327,7 @@ def main():
             # 2. Train autoencoder..
             autoencoder_optimizer.zero_grad()
 
-            output = encoder(batch_inputs)
-            output = decoder(output)
+            output = autoencoder(batch_inputs)
 
             autoencoder_loss = autoencoder_loss_func(output, batch_ref_data)
             autoencoder_losses.append(autoencoder_loss.item())
@@ -393,7 +389,7 @@ def main():
 
                 cumulative_channel = 0
                 for feature, shape in features_list.items():
-                    
+
                     if len(shape) > 2:
                         _, _, c = shape
                     else:
@@ -410,8 +406,7 @@ def main():
 
                 torch.save({
                             'iteration': iteration,
-                            'encoder_state_dict': encoder.state_dict(),
-                            'decoder_state_dict': decoder.state_dict(),
+                            'autoencoder_state_dict': autoencoder.state_dict(),
                             'optimizer_state_dict': autoencoder_optimizer.state_dict(),
                             'autoencoder_losses': autoencoder_losses
                         }, save_autoencoder_model_path)
