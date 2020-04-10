@@ -18,7 +18,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.autoencoders.ushaped import UShapedAutoencoder as AutoEncoder
+from models.autoencoders.ushaped_dropout import UShapedAutoencoder as AutoEncoder
 from models.discriminators.discriminator_v1 import Discriminator
 
 # losses imports
@@ -266,6 +266,8 @@ def main():
             autoencoder_optimizer.load_state_dict(autoencoder_checkpoint['optimizer_state_dict'])
             autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
+            autoencoder.train()
+
             # load discriminator state
             if os.path.exists(load_discriminator_model_path):
                 discriminator_checkpoint = torch.load(load_discriminator_model_path)
@@ -273,6 +275,8 @@ def main():
                 discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
                 discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
                 discriminator_losses = discriminator_checkpoint['discriminator_losses']
+
+                discriminator.train()
 
             # load global state
             global_checkpoint = torch.load(load_global_model_path)
