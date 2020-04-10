@@ -3,6 +3,9 @@ import numpy as np
 import argparse
 import os
 
+# image processing
+from PIL import Image
+
 # deep learning imports
 import torch
 import torchvision
@@ -26,7 +29,7 @@ log = gym.logger
 log.set_level(gym.logger.INFO)
 
 # other parameters
-IMAGE_SIZE = 64
+NB_IMAGES = 64
 
 BACKUP_MODEL_NAME = "{}_model.pt"
 BACKUP_FOLDER = "saved_models"
@@ -139,10 +142,22 @@ def main():
 
     image_folders_data = [img_ref_folder]
 
+    features_list = {}
+
     # get all others data
     for feature in os.listdir(train_path):
+
         if feature != 'references':
-            feature_train_path = os.path.join(train_path, 'references')
+
+            feature_train_path = os.path.join(train_path, feature)
+
+            # get shape of first image
+            first_folder = os.listdir(feature_train_path)[0]
+            first_folder_path = os.path.join(feature_train_path, first_folder)
+            first_img = os.listdir(first_folder_path)[0]
+            first_img_path = os.path.join(first_folder_path, first_img)
+
+            features_list[feature] = np.array(Image.open(first_img_path)).shape
 
             img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
                 #transforms.RandomVerticalFlip(1.), # flip horizontally all images
@@ -245,11 +260,12 @@ def main():
             autoencoder_losses = autoencoder_checkpoint['autoencoder_losses']
 
             # load discriminator state
-            discriminator_checkpoint = torch.load(load_discriminator_model_path)
+            if os.path.exists(load_discriminator_model_path):
+                discriminator_checkpoint = torch.load(load_discriminator_model_path)
 
-            discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
-            discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
-            discriminator_losses = discriminator_checkpoint['discriminator_losses']
+                discriminator.load_state_dict(discriminator_checkpoint['model_state_dict'])
+                discriminator_optimizer.load_state_dict(discriminator_checkpoint['optimizer_state_dict'])
+                discriminator_losses = discriminator_checkpoint['discriminator_losses']
 
             # load global state
             global_checkpoint = torch.load(load_global_model_path)
@@ -370,9 +386,22 @@ def main():
                 discriminator_losses = []
                 
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
-                writer.add_image("fake", vutils.make_grid(output.data[:IMAGE_SIZE], normalize=True), iteration)
+
                 #writer.add_image("noisy", vutils.make_grid(batch_inputs[:IMAGE_SIZE], normalize=True), iteration)
-                writer.add_image("real", vutils.make_grid(batch_ref_data[:IMAGE_SIZE], normalize=True), iteration)
+                writer.add_image("real", vutils.make_grid(batch_ref_data[:NB_IMAGES], normalize=True), iteration)
+                writer.add_image("denoised", vutils.make_grid(output.data[:NB_IMAGES], normalize=True), iteration)
+
+                cumulative_channel = 0
+                for feature, shape in features_list.items():
+                    
+                    if len(shape) > 2:
+                        _, _, c = shape
+                    else:
+                        c = 1
+
+                    writer.add_image(feature, vutils.make_grid(batch_inputs[:NB_IMAGES, cumulative_channel:cumulative_channel+c], normalize=True), iteration)
+
+                    cumulative_channel += c
 
             # 6. Backup models information
             if iteration % BACKUP_EVERY_ITER == 0:
