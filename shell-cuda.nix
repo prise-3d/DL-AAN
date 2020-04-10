@@ -49,6 +49,7 @@ in pkgs.mkShell {
     pypkgs.numpy
     pypkgs.pytorchWithCuda
     pypkgs.torchvision
+    pypkgs.scikitimage
 
     tensorboardX
     rawls
