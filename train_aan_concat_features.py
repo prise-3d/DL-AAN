@@ -146,7 +146,7 @@ def main():
     features_list = {}
 
     # get all others data
-    for feature in os.listdir(train_path):
+    for feature in sorted(os.listdir(train_path)):
 
         if feature != 'references':
 
@@ -160,12 +160,22 @@ def main():
 
             features_list[feature] = np.array(Image.open(first_img_path)).shape
 
-            img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
-                #transforms.RandomVerticalFlip(1.), # flip horizontally all images
-                transforms.ToTensor(),
-                #CustomNormalize()
-                #transforms.Normalize([123, 123, 123], [123, 123, 123])
-            ]))
+            print(feature, '=>', features_list[feature])
+
+            # check input shape and grayscale if necessary
+            if len(features_list[feature]) > 2:
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
+                    #transforms.RandomVerticalFlip(1.), # flip horizontally all images
+                    transforms.ToTensor(),
+                    #CustomNormalize()
+                    #transforms.Normalize([123, 123, 123], [123, 123, 123])
+                ]))
+            else:
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
+                    #transforms.RandomVerticalFlip(1.), # flip horizontally all images
+                    transforms.Grayscale(num_output_channels=1),
+                    transforms.ToTensor(),
+                ]))
 
             image_folders_data.append(img_folder)
 
