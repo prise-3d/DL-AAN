@@ -93,6 +93,10 @@ class CustomNormalize(object):
 
         return torch.from_numpy(image)
 
+def loadImage(filename):
+    img_pil = Image.open(filename)
+    return np.array(img_pil) / 255.
+
 def main():
 
     save_model = False
@@ -134,7 +138,7 @@ def main():
     references_train_path = os.path.join(train_path, 'references')
 
     # set references as first params
-    img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
+    img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, loader=loadImage,transform=transforms.Compose([
         #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
         #CustomNormalize()
@@ -164,14 +168,14 @@ def main():
 
             # check input shape and grayscale if necessary
             if len(features_list[feature]) > 2:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, loader=loadImage, transform=transforms.Compose([
                     #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                     transforms.ToTensor(),
                     #CustomNormalize()
                     #transforms.Normalize([123, 123, 123], [123, 123, 123])
                 ]))
             else:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, loader=loadImage, transform=transforms.Compose([
                     #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                     transforms.Grayscale(num_output_channels=1),
                     transforms.ToTensor(),
