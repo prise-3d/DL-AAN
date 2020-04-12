@@ -11,10 +11,6 @@ class UShapedAutoencoder(torch.nn.Module):
         super(UShapedAutoencoder, self).__init__()
 
         # Input depth:
-        # Intensity RGB
-        # Normals XYZ
-        # Distance Z
-        # 7 channels
 
         # Output depth:
         # Intensity RGB
@@ -92,7 +88,7 @@ class UShapedAutoencoder(torch.nn.Module):
             nn.ConvTranspose2d(K, K, 3, stride=1, padding=1),
             nn.LeakyReLU(0.2),
             nn.Conv2d(K, 3, 1, stride=1, padding=0),
-            nn.ReLU()
+            nn.Sigmoid()
         )
         # Out 32x32
 

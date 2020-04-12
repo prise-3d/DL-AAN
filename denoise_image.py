@@ -135,6 +135,8 @@ def main():
     n_h_tiles = math.ceil(h / tile_size[0])
     n_w_tiles = math.ceil(w / tile_size[1]) 
 
+    print(n_h_tiles, n_w_tiles)
+
     number_of_calls = n_h_tiles * n_w_tiles
     image_counter = 0
 
@@ -172,8 +174,6 @@ def main():
             # extract data
             input_tile = input_data[:, h_final_start:h_end, w_final_start:w_end]
 
-            c, h, w = input_tile.shape
-
             input_tile = np.expand_dims(input_tile, axis=0)
             # input_tile = np.array(input_tile / 255.)
        
@@ -186,6 +186,10 @@ def main():
             # print('(', h_final_start, '-', h_end, ') | (', w_final_start, '-', w_end, ')')
 
             np_output_tile = np.squeeze(output_tile.detach().numpy())
+
+            # print('- min', np.min(np_output_tile))
+            # print('- min', np.max(np_output_tile))
+            # print('- mean', np.max(np_output_tile))
 
             output_array[:, h_final_start:h_end, w_final_start:w_end] = np_output_tile
 
