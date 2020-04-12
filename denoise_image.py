@@ -88,13 +88,12 @@ def main():
         
         img_array = np.array(Image.open(img_path))
 
+        # print(img_path)
+        # print('min', np.min(img_array))
+        # print('mean', np.mean(img_array))
+        # print('max', np.max(img_array))
 
-        print(img_path)
-        print('min', np.min(img_array))
-        print('mean', np.mean(img_array))
-        print('max', np.max(img_array))
-
-        img_array = img_array / 255.
+        img_array = img_array / np.max(img_array)
         
         if img_array.ndim < 3:
         
@@ -172,10 +171,13 @@ def main():
 
             # extract data
             input_tile = input_data[:, h_final_start:h_end, w_final_start:w_end]
+
+            c, h, w = input_tile.shape
+
             input_tile = np.expand_dims(input_tile, axis=0)
             # input_tile = np.array(input_tile / 255.)
-            
-            #print('model input', input_tile.shape)
+       
+            # print('model input', input_tile.shape)
 
             # predict output_data
             output_tile = autoencoder(torch.from_numpy(input_tile).float())
@@ -184,10 +186,6 @@ def main():
             # print('(', h_final_start, '-', h_end, ') | (', w_final_start, '-', w_end, ')')
 
             np_output_tile = np.squeeze(output_tile.detach().numpy())
-            
-            print('min', np.min(np_output_tile))
-            print('mean', np.mean(np_output_tile))
-            print('max', np.max(np_output_tile))
 
             output_array[:, h_final_start:h_end, w_final_start:w_end] = np_output_tile
 
@@ -200,6 +198,8 @@ def main():
     output_array = output_array.transpose(1, 2, 0)
 
     Image.fromarray(np.array(output_array, 'uint8')).save(p_output)
+    print('Image is now saved...', p_output)
+    
 
 if __name__ == "__main__":
     main()

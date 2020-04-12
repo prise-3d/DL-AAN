@@ -93,10 +93,6 @@ class CustomNormalize(object):
 
         return torch.from_numpy(image)
 
-def loadImage(filename):
-    img_pil = Image.open(filename)
-    return np.array(img_pil) / 255.
-
 def main():
 
     save_model = False
@@ -138,7 +134,7 @@ def main():
     references_train_path = os.path.join(train_path, 'references')
 
     # set references as first params
-    img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, loader=loadImage,transform=transforms.Compose([
+    img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
         #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
         #CustomNormalize()
@@ -168,17 +164,18 @@ def main():
 
             # check input shape and grayscale if necessary
             if len(features_list[feature]) > 2:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, loader=loadImage, transform=transforms.Compose([
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
                     #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                     transforms.ToTensor(),
                     #CustomNormalize()
                     #transforms.Normalize([123, 123, 123], [123, 123, 123])
                 ]))
             else:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, loader=loadImage, transform=transforms.Compose([
+                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
                     #transforms.RandomVerticalFlip(1.), # flip horizontally all images
                     transforms.Grayscale(num_output_channels=1),
                     transforms.ToTensor(),
+                    #CustomNormalize(),
                 ]))
 
             image_folders_data.append(img_folder)
@@ -341,7 +338,7 @@ def main():
             # convert batch to specific device
             batch_inputs = batch_inputs.to(device)
             batch_ref_data = batch_ref_data.to(device)
-            
+
             # 2. Train autoencoder..
             autoencoder_optimizer.zero_grad()
 
@@ -402,8 +399,8 @@ def main():
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
 
                 #writer.add_image("noisy", vutils.make_grid(batch_inputs[:IMAGE_SIZE], normalize=True), iteration)
-                writer.add_image("real", vutils.make_grid(batch_ref_data[:NB_IMAGES], normalize=True), iteration)
-                writer.add_image("denoised", vutils.make_grid(output.data[:NB_IMAGES], normalize=True), iteration)
+                writer.add_image("real", vutils.make_grid(batch_ref_data[:NB_IMAGES], normalize=False), iteration)
+                writer.add_image("denoised", vutils.make_grid(output.data[:NB_IMAGES], normalize=False), iteration)
 
                 cumulative_channel = 0
                 for feature, shape in features_list.items():
@@ -413,7 +410,7 @@ def main():
                     else:
                         c = 1
 
-                    writer.add_image(feature, vutils.make_grid(batch_inputs[:NB_IMAGES, cumulative_channel:cumulative_channel+c], normalize=True), iteration)
+                    writer.add_image(feature, vutils.make_grid(batch_inputs[:NB_IMAGES, cumulative_channel:cumulative_channel+c], normalize=False), iteration)
 
                     cumulative_channel += c
 

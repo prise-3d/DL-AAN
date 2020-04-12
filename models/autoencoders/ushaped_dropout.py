@@ -97,7 +97,7 @@ class UShapedAutoencoder(torch.nn.Module):
             nn.ConvTranspose2d(K, K, 3, stride=1, padding=1),
             nn.LeakyReLU(0.2),
             nn.Conv2d(K, 3, 1, stride=1, padding=0),
-            nn.ReLU()
+            nn.Sigmoid() # use of Sigmoid as output data
         )
         # Out 32x32
 
