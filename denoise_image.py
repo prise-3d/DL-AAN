@@ -20,7 +20,7 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 # models imports
-from models.autoencoders.ushaped_dropout import UShapedAutoencoder as AutoEncoder
+from models.autoencoders.ushaped import UShapedAutoencoder as AutoEncoder
 from models.discriminators.discriminator_v1 import Discriminator
 
 # losses imports
