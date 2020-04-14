@@ -4,6 +4,8 @@
 #include <iostream>
 #include <memory>
 
+#include <omp.h>
+
 int main(int argc, const char* argv[]) {
   if (argc != 2) {
     std::cerr << "usage: example-app <path-to-exported-script-module>\n";
@@ -11,13 +13,27 @@ int main(int argc, const char* argv[]) {
   }
 
   torch::jit::script::Module module;
+
   try {
     // Deserialize the ScriptModule from a file using torch::jit::load().
     // please use `autoencoder_convert.py` to convert your model in correct format
     module = torch::jit::load(argv[1]);
 
-    // prepare input data
 
+    // display test
+    std::vector<float> testValues;
+    for (int i = 0; i < 27; i++){
+      testValues.push_back(i);
+    }
+
+    auto testData = torch::tensor(testValues);
+    std::cout << testData << std::endl;
+  
+    // check the way the reshape data process is done
+    auto testDataReshaped = testData.view({3, 3, 3});
+    std::cout << testDataReshaped << std::endl;
+
+    // prepare input data
     // custom input example using vector
     std::vector<float> floatValues;
 
@@ -48,6 +64,7 @@ int main(int argc, const char* argv[]) {
     auto p = static_cast<float*>(output.data_ptr<float>());
     for(size_t i = 0; i < x_size; i++)
     {
+      std::cout << p[i] << std::endl;
       xv.push_back(p[i]);
     }
   }

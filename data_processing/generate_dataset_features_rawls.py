@@ -47,11 +47,17 @@ def write_progress(progress):
 '''
 Preprocessing for samples based values
 '''
-def rawls_preprocessing(rawls_img):
+def array_preprocessing(array):
 
-    rawls_img.data = np.log10(rawls_img.data + sys.float_info.epsilon)
+    array = np.log10(array + 1)
+    log_min = np.min(array)
+    log_max = np.max(array)
 
-    return rawls_img
+    for dim in range(array.ndim):
+        v = array[:, :, dim]
+        array[:, :, dim] = (v - log_min) / (log_max - log_min)
+
+    return array
 
 '''
 Constuct all dataset with specific tile size
@@ -96,8 +102,8 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
         reference_image = Rawls.load(reference_image_path)
 
         # add preprocessing step for samples based input
-        reference_image = rawls_preprocessing(reference_image)
-        reference_image = reference_image.normalize()
+        # reference_image = rawls_preprocessing(reference_image)
+        # reference_image = reference_image.normalize()
         reference_image = reference_image.data
 
         # get features images list
@@ -140,8 +146,8 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
                 feature_image = Rawls.load(images_path_list[index])
                 # add preprocessing step for samples based input
 
-                feature_image = rawls_preprocessing(feature_image)
-                feature_image = feature_image.normalize()
+                # feature_image = rawls_preprocessing(feature_image)
+                # feature_image = feature_image.normalize()
 
                 features_images.append(feature_image.data)
 
@@ -165,12 +171,20 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
                 # patch for reference
                 tile_extract_ref = reference_image[h_random:h_end, w_random:w_end]
                 output_reference_path = os.path.join(references_output_path, scene, output_image_name)
+
+                # processing
+                tile_extract_ref = array_preprocessing(tile_extract_ref)
+
                 np.save(output_reference_path, np.array(tile_extract_ref, 'float32'))
 
                 # patch for each feature
                 for f_i, img in enumerate(features_images):
                     tile_extract_feature = img[h_random:h_end, w_random:w_end]
                     output_feature_path = os.path.join(features_output_folder[f_i], scene, output_image_name)
+
+                    # processing
+                    tile_extract_feature = array_preprocessing(tile_extract_feature)
+                    
                     np.save(output_feature_path, np.array(tile_extract_feature, 'float32'))
 
                 # patch for each static data

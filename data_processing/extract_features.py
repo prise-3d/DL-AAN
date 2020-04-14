@@ -70,8 +70,6 @@ def extract(features, output_folder, scene_folder, index, images_path, extension
         if not os.path.exists(feature_path):
             os.makedirs(feature_path)
 
-        print(feature_image_path)
-        print(gamma_convert)
         rawls_stats_img.save(feature_image_path, gamma_convert)
 
 
