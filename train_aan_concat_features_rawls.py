@@ -93,6 +93,20 @@ class CustomNormalize(object):
 
         return torch.from_numpy(image)
 
+
+def numpy_loader(sample_path):
+
+    image_array = np.load(sample_path)
+
+    # convert as float 32
+    image_array = np.array(image_array, 'float32')
+
+    # if gray scale image
+    if image_array.ndim < 3:
+        image_array = np.expand_dims(image_array, axis=2)
+
+    return image_array
+
 def main():
 
     save_model = False
@@ -134,11 +148,9 @@ def main():
     references_train_path = os.path.join(train_path, 'references')
 
     # set references as first params
-    img_ref_folder = torchvision.datasets.ImageFolder(references_train_path, transform=transforms.Compose([
+    img_ref_folder = torchvision.datasets.DatasetFolder(references_train_path, loader=numpy_loader, extensions= ('npy'), transform=transforms.Compose([
         #transforms.RandomVerticalFlip(1.), # flip horizontally all images
         transforms.ToTensor(),
-        #CustomNormalize()
-        #transforms.Normalize([123, 123, 123], [123, 123, 123])
     ]))
 
     image_folders_data = [img_ref_folder]
@@ -158,25 +170,14 @@ def main():
             first_img = os.listdir(first_folder_path)[0]
             first_img_path = os.path.join(first_folder_path, first_img)
 
-            features_list[feature] = np.array(Image.open(first_img_path)).shape
+            features_list[feature] = np.load(first_img_path).shape
 
             print(feature, '=>', features_list[feature])
 
-            # check input shape and grayscale if necessary
-            if len(features_list[feature]) > 2:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
-                    #transforms.RandomVerticalFlip(1.), # flip horizontally all images
-                    transforms.ToTensor(),
-                    #CustomNormalize()
-                    #transforms.Normalize([123, 123, 123], [123, 123, 123])
-                ]))
-            else:
-                img_folder = torchvision.datasets.ImageFolder(feature_train_path, transform=transforms.Compose([
-                    #transforms.RandomVerticalFlip(1.), # flip horizontally all images
-                    transforms.Grayscale(num_output_channels=1),
-                    transforms.ToTensor(),
-                    #CustomNormalize(),
-                ]))
+            img_folder = torchvision.datasets.DatasetFolder(feature_train_path, loader=numpy_loader, extensions= ('npy'), transform=transforms.Compose([
+                #transforms.RandomVerticalFlip(1.), # flip horizontally all images
+                transforms.ToTensor(),
+            ]))
 
             image_folders_data.append(img_folder)
 
@@ -204,6 +205,7 @@ def main():
 
     # define models and loss functions
     autoencoder = AutoEncoder(n_channels, img_size).to(device)
+    # autoencoder.float()
     print(autoencoder)
 
     # set autoencoder parameters
@@ -342,7 +344,7 @@ def main():
             # 2. Train autoencoder..
             autoencoder_optimizer.zero_grad()
 
-            output = autoencoder(batch_inputs)
+            output = autoencoder(batch_inputs.float())
 
             autoencoder_loss = autoencoder_loss_func(output, batch_ref_data)
             autoencoder_losses.append(autoencoder_loss.item())
@@ -398,7 +400,6 @@ def main():
                 
             if iteration % SAVE_IMAGE_EVERY_ITER == 0:
 
-                #writer.add_image("noisy", vutils.make_grid(batch_inputs[:IMAGE_SIZE], normalize=True), iteration)
                 writer.add_image("real", vutils.make_grid(batch_ref_data[:NB_IMAGES], normalize=False), iteration)
                 writer.add_image("denoised", vutils.make_grid(output.data[:NB_IMAGES], normalize=False), iteration)
 

@@ -31,7 +31,7 @@ def write_progress(progress):
     sys.stdout.write("\033[F")
 
 
-def extract(features, output_folder, scene_folder, index, images_path):
+def extract(features, output_folder, scene_folder, index, images_path, extension, gamma_convert):
 
     # get only one time all images
     rawls_stats = RawlsStats.load(images_path)
@@ -64,13 +64,13 @@ def extract(features, output_folder, scene_folder, index, images_path):
         while len(index_str) < 5:
             index_str = "0" + index_str
 
-        feature_image_name = scene_folder + '_' + index_str + '.png'
+        feature_image_name = scene_folder + '_' + index_str + '.' + extension
         feature_image_path = os.path.join(feature_path, feature_image_name)
 
         if not os.path.exists(feature_path):
             os.makedirs(feature_path)
 
-        rawls_stats_img.save(feature_image_path)
+        rawls_stats_img.save(feature_image_path, gamma_convert)
 
 
 def main():
@@ -80,6 +80,8 @@ def main():
     parser.add_argument('--folder', type=str, help="folder scenes with pixels data (rawls files)", required=True)
     parser.add_argument('--samples', type=int, help='number of samples to use', required=True)
     parser.add_argument('--images', type=int, help='number of images for each scene', required=True)
+    parser.add_argument('--ext', type=str, help='output expected extension', choices=['png', 'rawls'], required=False)
+    parser.add_argument('--gamma', type=int, help='use of gamma conversion', choices=[0, 1], default=0, required=False)
     parser.add_argument('--features', type=str, help="expected features list from `" + str(cfg.features_list) + "`", default=cfg.features_list[0], required=True)
     parser.add_argument('--output', type=str, help='output folder', default='', required=True)
 
@@ -88,6 +90,8 @@ def main():
     p_folder   = args.folder
     p_samples  = args.samples
     p_images   = args.images
+    p_ext      = args.ext
+    p_gamma    = bool(args.gamma)
     p_features = args.features.split(',')
     p_output   = args.output
 
@@ -116,7 +120,7 @@ def main():
             random.shuffle(images_path)
             images_choices = images_path[0:p_samples]
 
-            extract(p_features, p_output, folder, i, images_choices)
+            extract(p_features, p_output, folder, i, images_choices, p_ext, p_gamma)
 
             # write progress using global variable
             write_progress((images_counter + 1) / number_of_images)
