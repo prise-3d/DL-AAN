@@ -29,8 +29,8 @@ let
 
   rawls = pypkgs.buildPythonPackage rec {
     pname = "rawls";
-    version = "0.1.2";
-    src = fetchTarball "https://github.com/prise-3d/rawls/archive/v0.1.2.tar.gz";
+    version = "0.1.4";
+    src = fetchTarball "https://github.com/prise-3d/rawls/archive/v0.1.4.tar.gz";
     propagatedBuildInputs = with pypkgs; [
       scipy
       pillow
