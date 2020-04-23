@@ -47,11 +47,15 @@ def write_progress(progress):
 '''
 Preprocessing for samples based values
 '''
-def array_preprocessing(array):
+def array_preprocessing(array, display=False):
 
     array = np.log10(array + 1)
     log_min = np.min(array)
     log_max = np.max(array)
+
+    if display:
+        print(np.min(log_min))
+        print(np.max(log_max))
 
     for dim in range(array.ndim):
         v = array[:, :, dim]
@@ -103,9 +107,7 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
 
         # add preprocessing step for samples based input
         # processing
-        reference_image = array_preprocessing(reference_image.data)
-        print(np.min(reference_image))
-        print(np.max(reference_image))
+        reference_image = array_preprocessing(reference_image.data, True)
 
         # get features images list
         features_images_path = []
