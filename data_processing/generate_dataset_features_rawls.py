@@ -104,8 +104,8 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
         # add preprocessing step for samples based input
         # processing
         reference_image = array_preprocessing(reference_image.data)
-        print(np.min(reference_images))
-        print(np.max(reference_images))
+        print(np.min(reference_image))
+        print(np.max(reference_image))
 
         # get features images list
         features_images_path = []
