@@ -1,4 +1,5 @@
 let
+  bootstrap = import <nixpkgs> {};
   rev = "dfa8e8b9bc4a18bab8f2c55897b6054d31e2c71b";
   channel = fetchTarball "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
   config = {
@@ -43,7 +44,7 @@ in pkgs.mkShell {
 
   buildInputs = [
     pkgs.linuxPackages.nvidia_x11
-
+    bootstrap.python3Packages.tensorflowWithoutCuda
     pypkgs.gym 
     pypkgs.matplotlib
     pypkgs.numpy
