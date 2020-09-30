@@ -78,6 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate all expected features for reconstructed images for each point of view of scenes")
 
     parser.add_argument('--folder', type=str, help="folder scenes with pixels data (rawls files)", required=True)
+    parser.add_argument('--expected', type=int, help='expected number of images into scene folder', default=10000)
     parser.add_argument('--samples', type=int, help='number of samples to use', required=True)
     parser.add_argument('--images', type=int, help='number of images for each scene', required=True)
     parser.add_argument('--ext', type=str, help='output expected extension', choices=['png', 'rawls'], required=False)
@@ -89,6 +90,7 @@ def main():
 
     p_folder   = args.folder
     p_samples  = args.samples
+    p_expected = args.expected
     p_images   = args.images
     p_ext      = args.ext
     p_gamma    = bool(args.gamma)
@@ -114,6 +116,10 @@ def main():
         folder_path = os.path.join(p_folder, folder)
         
         images_path = [ os.path.join(folder_path, img) for img in sorted(os.listdir(folder_path)) ]
+
+        # do not use this folder, because it is not an expected number of samples
+        if len(images_path) < p_expected:
+            continue
 
         for i in range(p_images):
             
