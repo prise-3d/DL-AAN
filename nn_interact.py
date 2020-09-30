@@ -14,7 +14,7 @@ from torch.autograd.variable import Variable
 from models.autoencoders.ushaped import UShapedAutoencoder as AutoEncoder
 from models.discriminators.discriminator_v1 import Discriminator
 
-
+nb_call_nn = 0
 
 # -----------------------------------------------------------------------------
 # Initialize current root dir
@@ -30,7 +30,7 @@ INPUT_N_CHANNELS = 7
 BACKUP_FOLDER = "ml/saved_models"
 BACKUP_MODEL_NAME = "{}_model.pt"
 
-DEFAULT_MODEL = 'aan1_samples_ushaped'
+DEFAULT_MODEL = 'aan1_samples_based_norm'
 DEFAULT_MODEL_PATH = os.path.join(rootdir, BACKUP_FOLDER, DEFAULT_MODEL)
 
 # =============================================================================
@@ -59,14 +59,9 @@ def read_input():
     distanceArray = read_float_array(IMAGE_TILE_SIZE * IMAGE_TILE_SIZE * 1)
 
     # Reshape read arrays into (height, width, channels)
-    spectrumArray = spectrumArray.reshape((IMAGE_TILE_SIZE, IMAGE_TILE_SIZE, 3))
-    normalsArray = normalsArray.reshape((IMAGE_TILE_SIZE, IMAGE_TILE_SIZE, 3))
-    distanceArray = distanceArray.reshape((IMAGE_TILE_SIZE, IMAGE_TILE_SIZE, 1))
-
-    # Transpose into (channels, height, width)
-    spectrumArray = spectrumArray.transpose((2, 0, 1))
-    normalsArray = normalsArray.transpose((2, 0, 1))
-    distanceArray = distanceArray.transpose((2, 0, 1))
+    spectrumArray = spectrumArray.reshape((3, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE))
+    normalsArray = normalsArray.reshape((3, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE))
+    distanceArray = distanceArray.reshape((1, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE))
 
     # Concatenate into single multiarray
     return numpy.concatenate([spectrumArray, normalsArray, distanceArray], axis=0)
@@ -76,8 +71,9 @@ def read_input():
 # Outputted as an image with dimensions order as (height, width, channel)
 def output_to_stdout(nparray):
     # Reshape into (height, width, channel)
-    data = numpy.transpose(nparray, (1, 2, 0))
-    buff = data.tobytes()
+    # data = numpy.transpose(nparray, (1, 2, 0))
+    # buff = data.tobytes()
+    buff = nparray.tobytes()
     sys.stdout.buffer.write(buff)
     write_char("x")
     write_char("\n")
@@ -90,6 +86,24 @@ def process_one(net):
     # Read input from stdin
     inputNdArray = read_input()
 
+    global nb_call_nn
+
+    index_str = str(nb_call_nn)
+
+    while len(index_str) < 5:
+        index_str = "0" + index_str
+
+    spectrum = inputNdArray[0:3, :, :]
+    normals = inputNdArray[3:6, :, :]
+    zbuffer = inputNdArray[6, :, :]
+
+    if not os.path.exists('data/input'):
+        os.makedirs('data/input')
+
+    numpy.save('data/input/spectrum_' + index_str, spectrum)
+    numpy.save('data/input/normals_' + index_str, normals)
+    numpy.save('data/input/zbuffer_' + index_str, zbuffer)
+
     torchData = torch.from_numpy(inputNdArray).float()
     torchData = torchData.unsqueeze(0)
     inputVariable = Variable(torchData)
@@ -100,12 +114,19 @@ def process_one(net):
     outputNdArray = outputVariable.data.numpy()[0]
     output_to_stdout(outputNdArray)
 
+    if not os.path.exists('data/output'):
+        os.makedirs('data/output')
+
+    numpy.save('data/output/output_' + index_str, outputNdArray)
+
+    nb_call_nn += 1
+
 # =============================================================================
 # Main
 
 def main():
 
-    print_stderr("nn_interact.py: Startup")
+    # print_stderr("nn_interact.py: Startup")
     torch.set_num_threads(1)
     
     # Load model
@@ -120,7 +141,7 @@ def main():
     # Put in eval mode
     net.eval()
 
-    print_stderr("Model loaded")
+    # print_stderr("Model loaded")
 
     while True:
         process_one(net)
