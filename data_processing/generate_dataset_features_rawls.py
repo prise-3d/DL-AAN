@@ -47,11 +47,15 @@ def write_progress(progress):
 '''
 Preprocessing for samples based values
 '''
-def array_preprocessing(array):
+def array_preprocessing(array, display=False):
 
     array = np.log10(array + 1)
     log_min = np.min(array)
     log_max = np.max(array)
+
+    if display:
+        print(np.min(log_min))
+        print(np.max(log_max))
 
     for dim in range(array.ndim):
         v = array[:, :, dim]
@@ -59,10 +63,13 @@ def array_preprocessing(array):
 
     return array
 
+def min_max_norm(tile, image):
+    return (tile - image.min()) / (image.max() - image.min())
+
 '''
 Constuct all dataset with specific tile size
 '''
-def construct_tiles(scenes, main_path, features, statics_path, references_path, output_path, nb, tile_size):
+def construct_tiles(scenes, main_path, features, statics_path, references_path, output_path, nb, tile_size, norm):
 
     global images_counter
 
@@ -102,8 +109,6 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
         reference_image = Rawls.load(reference_image_path)
 
         # add preprocessing step for samples based input
-        # reference_image = rawls_preprocessing(reference_image)
-        # reference_image = reference_image.normalize()
         reference_image = reference_image.data
 
         # get features images list
@@ -146,9 +151,6 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
                 feature_image = Rawls.load(images_path_list[index])
                 # add preprocessing step for samples based input
 
-                # feature_image = rawls_preprocessing(feature_image)
-                # feature_image = feature_image.normalize()
-
                 features_images.append(feature_image.data)
 
             for _ in range(nb):
@@ -170,26 +172,32 @@ def construct_tiles(scenes, main_path, features, statics_path, references_path, 
 
                 # patch for reference
                 tile_extract_ref = reference_image[h_random:h_end, w_random:w_end]
-                output_reference_path = os.path.join(references_output_path, scene, output_image_name)
 
-                # processing
-                tile_extract_ref = array_preprocessing(tile_extract_ref)
+                # norm image using global image
+                tile_extract_ref = min_max_norm(tile_extract_ref, reference_image)
+
+                output_reference_path = os.path.join(references_output_path, scene, output_image_name)
 
                 np.save(output_reference_path, np.array(tile_extract_ref, 'float32'))
 
                 # patch for each feature
                 for f_i, img in enumerate(features_images):
                     tile_extract_feature = img[h_random:h_end, w_random:w_end]
-                    output_feature_path = os.path.join(features_output_folder[f_i], scene, output_image_name)
 
-                    # processing
-                    tile_extract_feature = array_preprocessing(tile_extract_feature)
+                    # norm image using global image
+                    tile_extract_feature = min_max_norm(tile_extract_feature, img)
+
+                    output_feature_path = os.path.join(features_output_folder[f_i], scene, output_image_name)
                     
                     np.save(output_feature_path, np.array(tile_extract_feature, 'float32'))
 
                 # patch for each static data
                 for s_i, img in enumerate(static_scenes_images):
                     tile_extract_static = img[h_random:h_end, w_random:w_end]
+                    
+                    # norm image using global image
+                    tile_extract_static = min_max_norm(tile_extract_static, img)
+
                     output_static_path = os.path.join(statics_output_folder[s_i], scene, output_image_name)
                     np.save(output_static_path, np.array(tile_extract_static, 'float32'))
 
@@ -204,14 +212,15 @@ def main():
 
     parser = argparse.ArgumentParser(description="Output data file")
 
-    parser.add_argument('--main', type=str, help="main folder with features sub folders")
-    parser.add_argument('--features', type=str, help="features to select from this main folder `" + str(cfg.features_list) + "`", default=cfg.features_list[0])
+    parser.add_argument('--main', type=str, help="main folder with features sub folders", required=True)
+    parser.add_argument('--features', type=str, help="features to select from this main folder `" + str(cfg.features_list) + "`", required=True)
     parser.add_argument('--statics', type=str, help="list of static features to take care (managed like references)", default='')
-    parser.add_argument('--references', type=str, help='folder scenes with references')
-    parser.add_argument('--nb', type=int, help='number of tile extracted from each images')
+    parser.add_argument('--references', type=str, help='folder scenes with references', required=True)
+    parser.add_argument('--nb', type=int, help='number of tile extracted from each images', required=True)
     parser.add_argument('--tile_size', type=str, help='specify size of the tile used', default='32,32')
-    parser.add_argument('--output', type=str, help='output folder of whole data `test` and `train` folder')
+    parser.add_argument('--output', type=str, help='output folder of whole data `test` and `train` folder', required=True)
     parser.add_argument('--train_split', type=float, help='test split size of generated data (based of number of scenes)', default=0.2)
+    parser.add_argument('--norm', type=int, help='normalize saved tile using min and max from current image', default=1, choices=[0, 1])
 
     args = parser.parse_args()
 
@@ -223,6 +232,7 @@ def main():
     p_tile       = args.tile_size.split(',')
     p_output     = args.output
     p_split      = args.train_split
+    p_norm       = args.norm
 
     tile_size = int(p_tile[0]), int(p_tile[1])
 
@@ -251,10 +261,10 @@ def main():
     output_train_folder = os.path.join(p_output, data_train_folder)
 
     # contruct test tiles
-    construct_tiles(test_scenes, p_main, p_features, p_statics, p_references, output_test_folder, p_nb, tile_size)
+    construct_tiles(test_scenes, p_main, p_features, p_statics, p_references, output_test_folder, p_nb, tile_size, p_norm)
 
     # construct train tiles
-    construct_tiles(train_scenes, p_main, p_features, p_statics, p_references, output_train_folder, p_nb, tile_size)
+    construct_tiles(train_scenes, p_main, p_features, p_statics, p_references, output_train_folder, p_nb, tile_size, p_norm)
 
     print()
     

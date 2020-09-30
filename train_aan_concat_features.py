@@ -79,20 +79,6 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __len__(self):
         return min(len(d) for d in self.datasets)
 
-
-class CustomNormalize(object):
-    """Normalize image input between 0 and 1.
-    """
-
-    def __call__(self, sample):
-        
-        image = sample.numpy()
-
-        # normalise data
-        image = image / np.max(image)
-
-        return torch.from_numpy(image)
-
 def main():
 
     save_model = False
