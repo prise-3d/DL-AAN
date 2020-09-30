@@ -33,14 +33,46 @@ def write_progress(progress):
 
 def extract(features, output_folder, scene_folder, index, images_path, extension, gamma_convert):
 
+    # check if image is already generated for each feature
+    n_generated = 0
+    for feature in features:
+
+        # compute output path of feature image
+        index_str = str(index)
+
+        while len(index_str) < 5:
+            index_str = "0" + index_str
+
+        feature_image_name = scene_folder + '_' + index_str + '.' + extension
+        feature_image_path = os.path.join(feature_path, feature_image_name)
+
+        if os.path.exists(feature_image_path):
+            n_generated += 1
+
+    # not necessary to compute images
+    if len(features) == n_generated:
+        return
+
     # get only one time all images
-    rawls_stats = RawlsStats.load(images_path)
+    rawls_stats = RawlsStats.load(images_path)        
 
     # compute feature using `rawls_stats`
     for feature in features:
         
         feature_path = os.path.join(output_folder, feature, scene_folder)
 
+        # compute output path of feature image
+        index_str = str(index)
+
+        while len(index_str) < 5:
+            index_str = "0" + index_str
+
+        feature_image_name = scene_folder + '_' + index_str + '.' + extension
+        feature_image_path = os.path.join(feature_path, feature_image_name)
+
+        if not os.path.exists(feature_path):
+            os.makedirs(feature_path)
+        
         rawls_stats_img = None
 
         if feature == 'mean':
@@ -57,18 +89,6 @@ def extract(features, output_folder, scene_folder, index, images_path, extension
 
         if feature == 'kurtosis':
             rawls_stats_img = rawls_stats.kurtosis()
-
-        # compute output path of feature image
-        index_str = str(index)
-
-        while len(index_str) < 5:
-            index_str = "0" + index_str
-
-        feature_image_name = scene_folder + '_' + index_str + '.' + extension
-        feature_image_path = os.path.join(feature_path, feature_image_name)
-
-        if not os.path.exists(feature_path):
-            os.makedirs(feature_path)
 
         rawls_stats_img.save(feature_image_path, gamma_convert)
 
